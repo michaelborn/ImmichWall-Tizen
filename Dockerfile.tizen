@@ -1,0 +1,58 @@
+FROM ubuntu:22.04
+
+ARG TIZEN_STUDIO_VERSION=6.0
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    libfontconfig1 \
+    libgtk-3-0 \
+    libkchart2 \
+    libkf5itemmodels5 \
+    libkf5kiowidgets5 \
+    cpio \
+    rpm2cpio \
+    libx11-6 \
+    libxext6 \
+    libxi6 \
+    libxrender1 \
+    libxtst6 \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd --create-home --shell /bin/bash developer
+USER developer
+WORKDIR /home/developer
+
+RUN curl --fail --location --silent --show-error \
+      "https://download.tizen.org/sdk/Installer/tizen-studio_${TIZEN_STUDIO_VERSION}/web-cli_Tizen_Studio_${TIZEN_STUDIO_VERSION}_ubuntu-64.bin" \
+      --output /tmp/tizen-studio-installer.bin \
+    && chmod +x /tmp/tizen-studio-installer.bin \
+    && /tmp/tizen-studio-installer.bin --accept-license /home/developer/tizen-studio \
+    && rm /tmp/tizen-studio-installer.bin
+
+RUN /home/developer/tizen-studio/package-manager/package-manager-cli.bin \
+      install --accept-license --no-java-check \
+      TV-SAMSUNG-Public-WebAppDevelopment cert-add-on
+
+# The public Tizen development profile mirrors the no-manual-certificate
+# Jellyfin installer workflow. It is for local development/sideload testing only.
+ARG TIZEN_DEV_PROFILE_REVISION=9bd2526b6c95370201bc0f1b8ae74ce46010e3a8
+RUN mkdir -p /home/developer/tizen-studio-data/profile \
+    && curl --fail --location --silent --show-error \
+      "https://raw.githubusercontent.com/vitalets/docker-tizen-webos-sdk/${TIZEN_DEV_PROFILE_REVISION}/tizen-profile/author.p12" \
+      --output /home/developer/author.p12 \
+    && curl --fail --location --silent --show-error \
+      "https://raw.githubusercontent.com/vitalets/docker-tizen-webos-sdk/${TIZEN_DEV_PROFILE_REVISION}/tizen-profile/profiles.xml" \
+      --output /home/developer/tizen-studio-data/profile/profiles.xml \
+    && chmod 600 /home/developer/author.p12
+
+ENV PATH="/home/developer/tizen-studio/tools:/home/developer/tizen-studio/tools/ide/bin:${PATH}"
+ENV APP_DIR=/app
+WORKDIR /app
+
+COPY --chown=developer:developer tizen/ /app/
+COPY --chmod=755 docker/package-tizen.sh /usr/local/bin/package-tizen
+
+ENTRYPOINT ["/usr/local/bin/package-tizen"]

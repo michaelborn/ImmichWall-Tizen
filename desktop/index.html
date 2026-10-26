@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b0c0e">
+    <title>Immich Wall</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main id="stage" class="stage">
+        <div class="photo-layer visible"><img id="photo-a" alt=""></div>
+        <div class="photo-layer"><img id="photo-b" alt=""></div>
+        <div id="empty-state" class="empty-state">
+            <div class="brand-mark" aria-hidden="true">i</div>
+            <p class="eyebrow">YOUR LIBRARY, ON DISPLAY</p>
+            <h1>Immich Wall</h1>
+            <p id="empty-message">Connecting to your Immich server…</p>
+            <button id="empty-retry" class="button button-primary" type="button">Try again</button>
+        </div>
+    </main>
+
+    <header id="topbar" class="chrome topbar">
+        <a class="wordmark" href="#" aria-label="Immich Wall home">
+            <span class="brand-mark small" aria-hidden="true">i</span>
+            <span>immich <b>wall</b></span>
+        </a>
+        <div class="connection">
+            <span id="connection-dot" class="connection-dot"></span>
+            <span id="connection-label">Connecting</span>
+            <span id="server-version" class="version"></span>
+        </div>
+    </header>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="paused-indicator" class="paused-indicator" aria-live="polite">Paused</div>
+
+    <div id="photo-info" class="photo-info">
+        <span id="photo-name"></span>
+        <span id="photo-date"></span>
+    </div>
+
+    <nav id="controls" class="chrome controls" aria-label="Slideshow controls">
+        <div class="photo-position"><span id="position">—</span></div>
+        <div class="transport">
+            <button id="previous" class="icon-button" type="button" aria-label="Previous photo" title="Previous (←)" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zm12.5 1.3v11.4L9 12z"/></svg>
+            </button>
+            <button id="pause" class="icon-button play-button" type="button" aria-label="Pause slideshow" title="Pause (Space)">
+                <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zm8 0h4v14h-4z"/></svg>
+                <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>
+            </button>
+            <button id="next" class="icon-button" type="button" aria-label="Next photo" title="Next (→)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM5.5 6.3v11.4L15 12z"/></svg>
+            </button>
+        </div>
+        <div class="utility-controls">
+            <button id="info" class="icon-button" type="button" aria-label="Show photo information" title="Photo information (I)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20m0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16m-1-9h2v6h-2zm0-4h2v2h-2z"/></svg>
+            </button>
+            <button id="fullscreen" class="icon-button" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z"/></svg>
+            </button>
+            <button id="open-settings" class="icon-button settings-button" type="button" aria-label="Open settings" title="Settings (S)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.8 7.8 0 0 0 0-2l2-1.5-2-3.5-2.4 1a8 8 0 0 0-1.7-1L15 3h-6l-.4 2.9a8 8 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a8 8 0 0 0 1.7 1L9 21h6l.4-2.9a8 8 0 0 0 1.7-1l2.4 1 2-3.5zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7"/></svg>
+            </button>
+        </div>
+    </nav>
+
+    <aside id="warning" class="warning" role="status" aria-live="assertive" hidden>
+        <span class="warning-symbol">!</span>
+        <span id="warning-message">Immich unavailable. Keeping the current photo on screen.</span>
+        <button id="retry" type="button">Retry</button>
+    </aside>
+
+    <div id="settings-scrim" class="settings-scrim"></div>
+    <aside id="settings-panel" class="settings-panel" role="dialog" aria-modal="true" aria-label="Slideshow settings" aria-hidden="true">
+        <div class="settings-header">
+            <div>
+                <p class="eyebrow">MAKE IT YOURS</p>
+                <h2>Settings</h2>
+            </div>
+            <button id="close-settings" class="icon-button" type="button" aria-label="Close settings">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18.3 5.7-1.4-1.4L12 9.2 7.1 4.3 5.7 5.7l4.9 4.9-4.9 4.9 1.4 1.4 4.9-4.9 4.9 4.9 1.4-1.4-4.9-4.9z" transform="translate(0 1)"/></svg>
+            </button>
+        </div>
+
+        <div class="settings-content">
+            <section class="setting-section">
+                <div class="section-heading">
+                    <div><h3>Photo source</h3><p>Choose what appears in the frame.</p></div>
+                </div>
+                <label class="field-label" for="source">Show photos from</label>
+                <select id="source" class="select-field">
+                    <option value="all">All photos</option>
+                    <option value="favorites">Favorites</option>
+                    <option value="album">An album</option>
+                </select>
+                <div id="album-field" class="conditional-field" hidden>
+                    <label class="field-label" for="album">Immich album</label>
+                    <select id="album" class="select-field"><option value="">Loading albums…</option></select>
+                </div>
+            </section>
+
+            <section class="setting-section">
+                <div class="section-heading">
+                    <div><h3>Slideshow</h3><p>Keep it unhurried.</p></div>
+                </div>
+                <label class="field-label" for="interval">Change photo every</label>
+                <select id="interval" class="select-field">
+                    <option value="1">1 minute</option>
+                    <option value="3">3 minutes</option>
+                    <option value="5">5 minutes</option>
+                    <option value="10">10 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                </select>
+            </section>
+
+            <section class="setting-section">
+                <div class="section-heading">
+                    <div><h3>Photo framing</h3><p>Choose how photos fit your screen.</p></div>
+                </div>
+                <div class="choice-row" role="radiogroup" aria-label="Photo framing">
+                    <label class="choice-card"><input type="radio" name="fit" value="cover"><span class="choice-icon crop-icon">◩</span><span><b>Fill</b><small>Crop to fill screen</small></span></label>
+                    <label class="choice-card"><input type="radio" name="fit" value="contain"><span class="choice-icon fit-icon">▣</span><span><b>Fit</b><small>Show the whole photo</small></span></label>
+                </div>
+            </section>
+
+            <section class="setting-section connection-section">
+                <div class="section-heading">
+                    <div><h3>Immich connection</h3><p id="settings-server">Reading local .env…</p></div>
+                </div>
+                <div class="connection-status"><span id="settings-dot" class="connection-dot"></span><span id="settings-connection">Checking connection…</span></div>
+                <button id="test-connection" class="button button-secondary" type="button">Test connection</button>
+                <p class="privacy-note">Your API key stays in the local server process and is never sent to the browser.</p>
+            </section>
+        </div>
+
+        <div class="settings-footer">
+            <button id="reset-settings" class="text-button" type="button">Reset preferences</button>
+            <button id="save-settings" class="button button-primary" type="button">Apply settings</button>
+        </div>
+    </aside>
+
+    <script src="state.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
