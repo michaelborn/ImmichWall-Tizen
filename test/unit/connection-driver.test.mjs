@@ -95,3 +95,29 @@ test('a desktop user agent gets the proxied desktop driver with no local persist
     const driver = Connection.create();
     assert.equal(driver.kind, 'desktop');
 });
+
+test('page selection spreads picks across the whole library, not just the newest page', () => {
+    assert.equal(Connection.choosePage(225, 100, () => 0), 1);
+    assert.equal(Connection.choosePage(225, 100, () => 0.5), 2);
+    assert.equal(Connection.choosePage(225, 100, () => 0.999), 3);
+    assert.equal(Connection.choosePage(100, 100, () => 0.999), 1);
+    assert.equal(Connection.choosePage(0, 100, () => 0.999), 1);
+
+    const tally = new Map();
+    for (let pick = 0; pick < 3000; pick += 1) {
+        const page = Connection.choosePage(500, 100, Math.random);
+        tally.set(page, (tally.get(page) ?? 0) + 1);
+    }
+    assert.deepEqual([...tally.keys()].sort((a, b) => a - b), [1, 2, 3, 4, 5]);
+    for (const count of tally.values()) {
+        assert.ok(count > 400 && count < 800, 'page distribution is roughly uniform: ' + JSON.stringify([...tally]));
+    }
+});
+
+test('asset choice avoids the excluded asset unless it is the only candidate', () => {
+    const items = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    assert.equal(Connection.chooseAsset(items, 'a', () => 0).id, 'b');
+    assert.equal(Connection.chooseAsset(items, 'a', () => 0.99).id, 'c');
+    assert.equal(Connection.chooseAsset(items, null, () => 0).id, 'a');
+    assert.equal(Connection.chooseAsset([{ id: 'a' }], 'a', () => 0).id, 'a');
+});

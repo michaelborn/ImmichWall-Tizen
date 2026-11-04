@@ -1,6 +1,25 @@
 (function (root) {
     'use strict';
 
+    var PAGE_SIZE = 100;
+
+    function choosePage(total, pageSize, random) {
+        var pageCount = Math.max(1, Math.ceil(total / pageSize));
+        return Math.floor(random() * pageCount) + 1;
+    }
+
+    function chooseAsset(items, excludeId, random) {
+        var candidates = items;
+        if (items.length > 1 && excludeId) {
+            var filtered = [];
+            for (var i = 0; i < items.length; i += 1) {
+                if (items[i].id !== excludeId) filtered.push(items[i]);
+            }
+            if (filtered.length) candidates = filtered;
+        }
+        return candidates[Math.floor(random() * candidates.length)];
+    }
+
     function createDesktopConnection() {
         function api(path, options) {
             return fetch(path, Object.assign({ cache: 'no-store' }, options || {})).then(function (response) {
@@ -148,18 +167,19 @@
                 return request(connection.serverUrl + '/api/albums', 'GET', connection.apiKey).then(normalizeAlbums);
             },
             randomPhoto({ source, albumId, excludeId }) {
-                var body = { page: 1, size: 100 };
+                var body = { page: 1, size: PAGE_SIZE };
                 if (source === 'favorites') body.isFavorite = true;
                 if (source === 'album') body.albumIds = [albumId];
-                return search(body).then(function (result) {
-                    var assets = result.assets && result.assets.items ? result.assets.items : [];
-                    if (!assets.length) throw new Error('No photos found for this source.');
-                    var candidates = assets;
-                    if (assets.length > 1 && excludeId) {
-                        var withoutExcluded = assets.filter(function (asset) { return asset.id !== excludeId; });
-                        if (withoutExcluded.length) candidates = withoutExcluded;
-                    }
-                    var asset = candidates[Math.floor(Math.random() * candidates.length)];
+                return search(body).then(function (firstPage) {
+                    var total = firstPage && firstPage.assets ? Number(firstPage.assets.total || 0) : 0;
+                    if (!total) throw new Error('No photos found for this source.');
+                    var page = choosePage(total, PAGE_SIZE, Math.random);
+                    if (page === 1) return firstPage;
+                    return search(Object.assign({}, body, { page: page }));
+                }).then(function (result) {
+                    var items = result.assets && result.assets.items ? result.assets.items : [];
+                    if (!items.length) throw new Error('No photos found for this source.');
+                    var asset = chooseAsset(items, excludeId, Math.random);
                     return {
                         id: asset.id,
                         fileName: asset.originalFileName || 'Immich photo',
@@ -221,7 +241,7 @@
         return createDesktopConnection();
     }
 
-    var api = { create: create };
+    var api = { create: create, choosePage: choosePage, chooseAsset: chooseAsset };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     root.ImmichWallConnection = api;
 }(typeof window === 'undefined' ? globalThis : window));
