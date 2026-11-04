@@ -1,0 +1,47 @@
+#!/bin/sh
+# Build, install, and launch the Immich Wall TV app on the target TV.
+# TV_IP and TV_NAME live in .env — they must never be written into this file.
+set -eu
+
+cd "$(dirname "$0")/.."
+
+ENV_FILE=${IMMICH_ENV_FILE:-.env}
+if [ ! -f "$ENV_FILE" ]; then
+    printf 'Missing %s. Copy .env.example to .env and add TV_IP and TV_NAME.\n' "$ENV_FILE" >&2
+    exit 1
+fi
+set -a
+. ./"$ENV_FILE"
+set +a
+
+: "${TV_IP:?Set TV_IP in .env}"
+: "${TV_NAME:?Set TV_NAME in .env}"
+
+mkdir -p output
+rm -f output/ImmichWall.wgt
+
+docker build --platform linux/amd64 \
+    --ulimit nofile=65536:65536 \
+    -f Dockerfile.tizen \
+    -t immich-wall-builder .
+
+printf 'Building and installing on the TV…\n'
+docker run --rm --platform linux/amd64 --network host \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp/tizen-home \
+    -e TV_IP="$TV_IP" \
+    -e TV_NAME="$TV_NAME" \
+    -v "$PWD/output:/output" \
+    immich-wall-builder
+
+printf 'Launching the app on the TV…\n'
+docker run --rm --platform linux/amd64 --network host \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp/tizen-home \
+    -e TV_IP="$TV_IP" \
+    -e TV_NAME="$TV_NAME" \
+    --entrypoint /bin/bash \
+    immich-wall-builder \
+    -c 'sdb connect "$TV_IP" >/dev/null 2>&1 || true; tizen run -t "$TV_NAME" -p ImTvWall01.ImmichWall 2>&1 | tail -2'
+
+printf 'Deploy finished.\n'

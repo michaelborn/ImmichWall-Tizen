@@ -24,7 +24,10 @@ function makeAsset(index) {
 }
 
 function sendJson(response, status, data) {
-    response.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
+    response.writeHead(status, {
+        'content-type': 'application/json; charset=utf-8',
+        'access-control-allow-origin': '*',
+    });
     response.end(JSON.stringify(data));
 }
 
@@ -45,6 +48,7 @@ export function createMockImmich({ apiKey = 'test-api-key', version = 'v-test.0'
         searchMode: 'ok',
         thumbnailMode: 'ok',
         pingMode: 'ok',
+        aboutMode: 'ok',
         searchDelayMs: 0,
         thumbnailDelayMs: 0,
         requestLog: [],
@@ -75,10 +79,20 @@ export function createMockImmich({ apiKey = 'test-api-key', version = 'v-test.0'
     const server = createServer(async (request, response) => {
         const url = new URL(request.url, 'http://mock-immich.local');
 
+        if (request.method === 'OPTIONS') {
+            response.writeHead(204, {
+                'access-control-allow-origin': '*',
+                'access-control-allow-methods': 'GET, HEAD, POST, OPTIONS',
+                'access-control-allow-headers': 'x-api-key, content-type',
+                'access-control-max-age': '600',
+            });
+            return response.end();
+        }
+
         if (url.pathname === '/__control' && request.method === 'POST') {
             try {
                 const changes = await readJson(request);
-                for (const key of ['searchMode', 'thumbnailMode', 'pingMode', 'searchDelayMs', 'thumbnailDelayMs']) {
+                for (const key of ['searchMode', 'thumbnailMode', 'pingMode', 'aboutMode', 'searchDelayMs', 'thumbnailDelayMs']) {
                     if (Object.hasOwn(changes, key)) state[key] = changes[key];
                 }
                 if (changes.resetRequests) {
@@ -112,6 +126,7 @@ export function createMockImmich({ apiKey = 'test-api-key', version = 'v-test.0'
         }
 
         if (url.pathname === '/api/server/about' && request.method === 'GET') {
+            if (state.aboutMode === 'auth') return sendJson(response, 401, { message: 'Unauthorized' });
             return sendJson(response, 200, { version });
         }
 
@@ -176,6 +191,7 @@ export function createMockImmich({ apiKey = 'test-api-key', version = 'v-test.0'
             response.writeHead(200, {
                 'content-type': 'image/png',
                 'cache-control': 'private, max-age=60',
+                'access-control-allow-origin': '*',
             });
             return response.end(state.thumbnailMode === 'corrupt' ? Buffer.from('not an image') : PNG);
         }

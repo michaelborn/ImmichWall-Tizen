@@ -25,3 +25,17 @@ test('production server entry point loads injected configuration and listens on 
     assert.equal(config.configured, true);
     assert.equal(Object.hasOwn(config, 'apiKey'), false);
 });
+
+test('desktop server does not implicitly read the root .env file', async (t) => {
+    const server = await startServer({
+        host: '127.0.0.1',
+        port: 0,
+        environment: {},
+        envFilePath: undefined,
+    });
+    t.after(() => close(server));
+
+    const address = server.address();
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/config`);
+    assert.deepEqual(await response.json(), { configured: false, serverUrl: '' });
+});

@@ -29,7 +29,7 @@ describe('local Immich proxy integration', () => {
         assert.ok((await thumbnail.arrayBuffer()).byteLength > 40);
     });
 
-    it('keeps the mock API key in the server-to-server request only', async () => {
+    it('forwards the key upstream without returning it from server configuration', async () => {
         const config = await fetch(fixture.baseUrl + '/api/config').then((response) => response.json());
         assert.equal(Object.hasOwn(config, 'apiKey'), false);
         const status = await fetch(fixture.baseUrl + '/api/status').then((response) => response.json());

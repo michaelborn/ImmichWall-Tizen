@@ -1,0 +1,82 @@
+:root {
+    color-scheme: dark;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #10131a;
+    color: #f4f5f7;
+    font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+.hidden { display: none !important; }
+
+body {
+    min-height: 100vh;
+    margin: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: radial-gradient(ellipse at top, #26324b 0, #10131a 60%);
+}
+
+.card {
+    width: min(100%, 460px);
+    padding: clamp(24px, 6vw, 40px);
+    border: 1px solid #343c4b;
+    border-radius: 20px;
+    background: #1a1f29;
+    box-shadow: 0 24px 80px #0007;
+}
+
+.eyebrow { margin: 0 0 10px; color: #8caaff; font-size: 0.78rem; font-weight: 750; letter-spacing: 0.16em; }
+h1 { margin: 0; font-size: clamp(1.8rem, 8vw, 2.4rem); }
+.step-label { margin: 10px 0 0; color: #9ba5b7; font-size: 0.85rem; font-weight: 650; }
+#intro { margin: 12px 0 26px; color: #b7bfce; line-height: 1.5; }
+form { display: grid; gap: 10px; }
+.step { display: grid; gap: 10px; }
+.step.hidden { display: none; }
+label { margin-top: 8px; font-size: 0.9rem; font-weight: 650; }
+input {
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 13px;
+    border: 1px solid #505b6d;
+    border-radius: 9px;
+    background: #11151d;
+    color: inherit;
+    font: inherit;
+}
+#pin { max-width: 180px; font-size: 1.4rem; letter-spacing: 0.22em; }
+.pair-pin { margin: 12px 0 0; color: #d7f36b; font-size: 1.8rem; font-weight: 750; letter-spacing: 0.18em; }
+input:focus { outline: 3px solid #7798ff; outline-offset: 2px; }
+button {
+    min-height: 50px;
+    margin-top: 14px;
+    border: 0;
+    border-radius: 9px;
+    background: #7897ff;
+    color: #111827;
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+}
+button:disabled { opacity: 0.65; cursor: wait; }
+.link-button {
+    justify-self: start;
+    min-height: 40px;
+    margin-top: 10px;
+    padding: 6px 2px;
+    background: none;
+    color: #b7c8ff;
+    font-weight: 650;
+    text-decoration: underline;
+}
+#status { min-height: 1.5em; margin: 18px 0 0; color: #b7c8ff; line-height: 1.45; }
+#status.error {
+    color: #ff8181;
+    font-weight: 750;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 82, 82, 0.5);
+    border-radius: 9px;
+    background: rgba(255, 82, 82, 0.12);
+}
+.note { margin: 22px 0 0; color: #9ba5b7; font-size: 0.82rem; line-height: 1.5; }

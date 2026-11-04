@@ -1,0 +1,22 @@
+# Immich Wall pairing/desktop server image: runtime code only, no dev tooling.
+FROM node:22-alpine
+
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=4173
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY config/immich.js config/package.json ./config/
+COPY scripts/desktop-server.mjs scripts/server.mjs ./scripts/
+COPY server/ ./server/
+COPY routes/ ./routes/
+COPY controllers/ ./controllers/
+COPY services/ ./services/
+COPY desktop/ ./desktop/
+COPY pair/ ./pair/
+
+USER node
+CMD ["node", "scripts/desktop-server.mjs"]

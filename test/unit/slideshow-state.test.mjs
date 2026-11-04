@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import State from '../../desktop/state.js';
+import State from '../../frontend/state.js';
 
 test('loads defaults and overlays saved preferences', () => {
     const storage = { getItem: () => JSON.stringify({ interval: 10, fit: 'contain' }) };

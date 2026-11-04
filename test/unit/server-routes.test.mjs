@@ -15,6 +15,7 @@ async function resetMock() {
         searchMode: 'ok',
         thumbnailMode: 'ok',
         pingMode: 'ok',
+        aboutMode: 'ok',
         searchDelayMs: 0,
         thumbnailDelayMs: 0,
         requestLog: [],
@@ -44,10 +45,13 @@ describe('desktop server routes', () => {
         assert.match(response.headers.get('cache-control'), /no-store/);
     });
 
-    it('proxies ping and about and returns the Immich version', async () => {
+    it('checks image-search access instead of requiring server metadata permission', async () => {
+        fixture.mock.mockState.aboutMode = 'auth';
         const { response, body } = await json('/api/status');
         assert.equal(response.status, 200);
-        assert.deepEqual(body, { connected: true, version: 'v-test.0' });
+        assert.deepEqual(body, { connected: true });
+        assert.deepEqual(fixture.mock.mockState.searchBodies[0], { type: 'IMAGE', page: 1, size: 1 });
+        assert.equal(fixture.mock.mockState.requestLog.some((request) => request.path === '/api/server/about'), false);
         assert.ok(fixture.mock.mockState.requestLog.every((request) => request.hasApiKey));
     });
 
@@ -176,7 +180,7 @@ describe('desktop server routes', () => {
     });
 
     it('times out a stalled Immich request', async () => {
-        fixture.mock.mockState.pingMode = 'slow';
+        fixture.mock.mockState.searchDelayMs = 1000;
         const { response, body } = await json('/api/status');
         assert.equal(response.status, 502);
         assert.match(body.error, /timed out/);
@@ -215,6 +219,62 @@ describe('desktop server routes', () => {
         assert.equal(config.configured, false);
         const status = await fetch(unconfigured.baseUrl + '/api/status');
         assert.equal(status.status, 503);
+    });
+
+    it('authenticates submitted connection details and keeps the key in server memory', async (t) => {
+        const unconfigured = await startTestApp({ configured: false });
+        t.after(unconfigured.close);
+        const apiKey = 'test-api-key';
+        unconfigured.mock.mockState.aboutMode = 'auth';
+
+        const rejected = await fetch(unconfigured.baseUrl + '/api/connect', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ serverUrl: unconfigured.upstreamUrl, apiKey: 'wrong-key' }),
+        });
+        assert.equal(rejected.status, 401);
+        assert.equal((await fetch(unconfigured.baseUrl + '/api/config').then((result) => result.json())).configured, false);
+
+        const response = await fetch(unconfigured.baseUrl + '/api/connect', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ serverUrl: unconfigured.upstreamUrl, apiKey }),
+        });
+        assert.equal(response.status, 200);
+        const connected = await response.json();
+        assert.equal(connected.configured, true);
+        assert.equal(Object.hasOwn(connected, 'apiKey'), false);
+        assert.doesNotMatch(JSON.stringify(connected), /test-api-key/);
+
+        const config = await fetch(unconfigured.baseUrl + '/api/config').then((result) => result.json());
+        assert.equal(config.configured, true);
+        assert.equal(Object.hasOwn(config, 'apiKey'), false);
+        assert.equal(unconfigured.mock.mockState.requestLog.at(-1).hasApiKey, true);
+
+        const disconnected = await fetch(unconfigured.baseUrl + '/api/disconnect', { method: 'POST' });
+        assert.equal(disconnected.status, 200);
+        assert.equal((await disconnected.json()).configured, false);
+        assert.equal((await fetch(unconfigured.baseUrl + '/api/config').then((result) => result.json())).configured, false);
+
+    });
+
+    it('rejects invalid connection URLs and empty keys without storing them', async (t) => {
+        const unconfigured = await startTestApp({ configured: false });
+        t.after(unconfigured.close);
+        const invalidUrl = await fetch(unconfigured.baseUrl + '/api/connect', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ serverUrl: 'file:///etc/passwd', apiKey: 'some-key' }),
+        });
+        assert.equal(invalidUrl.status, 400);
+
+        const emptyKey = await fetch(unconfigured.baseUrl + '/api/connect', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ serverUrl: unconfigured.upstreamUrl, apiKey: ' ' }),
+        });
+        assert.equal(emptyKey.status, 400);
+        assert.equal((await fetch(unconfigured.baseUrl + '/api/config').then((result) => result.json())).configured, false);
     });
 
     it('handles concurrent upstream requests without leaking request state', async () => {

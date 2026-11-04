@@ -6,17 +6,17 @@ The Tizen app is a foreground slideshow; it does not replace Samsung's home scre
 
 ## Run the desktop POC
 
-The local Node server reads the root `.env` and proxies Immich API calls, so the API key stays server-side and browser CORS is not required.
+The desktop app opens with a connection screen for the Immich URL and API key. It does not preload the root `.env`; the key is sent to the local server over `/api/connect` and kept only in server memory for that process. It is not written to browser storage or disk. The server proxies Immich calls, so browser CORS is not required.
 
 ```sh
 npm start
 ```
 
-Open [http://127.0.0.1:4173](http://127.0.0.1:4173). The desktop POC supports all photos, favorites, or an album; rotation interval and fill/fit framing; Previous/Next/Pause; photo details on demand; fullscreen; and bounded retries that preserve the current photo when Immich is unavailable. Preferences are saved in browser local storage.
+Open [http://127.0.0.1:4173](http://127.0.0.1:4173), enter the server URL and API key, and connect. The desktop POC supports all photos, favorites, or an album; rotation interval and fill/fit framing; Previous/Next/Pause; photo details on demand; fullscreen; and bounded retries that preserve the current photo when Immich is unavailable. Slideshow preferences are saved in browser local storage; restart the Node server to clear its in-memory API key.
 
-Keyboard shortcuts: **←/→** Previous/Next, **Space** Pause/Resume, **S** Settings, **I** photo details, **F** Fullscreen. The API key from `.env` is never sent to the browser.
+Keyboard shortcuts: **←/→** Previous/Next, **Space** Pause/Resume, **S** Settings, **I** photo details, **F** Fullscreen. The key is not included in API URLs or response data.
 
-Requires Node.js 20 or newer. Keep `.env` local; it is ignored by Git and Docker build context.
+Requires Node.js 20 or newer. `.env` remains available to the standalone API smoke test and opt-in live tests; the desktop server does not automatically load it. To explicitly opt into dotenv startup configuration later, run `IMMICH_ENV_FILE=.env npm start`.
 
 ## Try it on the TV without installing a package
 
@@ -40,8 +40,6 @@ The default tests use a local mock Immich server and do not read the real API ke
 ```sh
 LIVE_IMMICH=1 npm run test:live
 ```
-
-See [TESTING.md](TESTING.md) for coverage goals, test cases, and deployment checks.
 
 ## Build and install the Tizen app
 
@@ -73,9 +71,19 @@ The result is `output/ImmichWall.wgt`.
 
 ### Install on the TV
 
-1. Put the TV and computer on the same LAN.
-2. On the TV, open **Apps**, enter `12345`, enable **Developer Mode**, set the developer host IP to the computer's LAN IP, and reboot if prompted.
-3. Connect and install in one command, replacing the example TV values:
+Add `TV_IP` and `TV_NAME` to `.env` (copy the placeholders from `.env.example`; get `TV_NAME` from `sdb devices`), then deploy, install, and launch with one command:
+
+```sh
+npm run deploy
+```
+
+The script rebuilds the Tizen builder image on every run (so the package always matches the current `frontend/`), then builds, installs, and launches the app. The resulting artifact stays at `output/ImmichWall.wgt`. Keep the TV IP/model out of the repo; they live only in the gitignored `.env`.
+
+If you prefer running the steps by hand, the same flow is:
+
+1. Put the TV and desktop on the same LAN.
+2. On the TV, open **Apps**, enter `12345`, enable **Developer Mode**, set the developer host IP to the desktop's LAN IP, and reboot if prompted.
+3. Build and install with the container, replacing the example TV values:
 
    ```sh
    docker run --rm --platform linux/amd64 --network host \
@@ -93,18 +101,28 @@ If your TV rejects the shared development signature with a certificate error, us
 
 ## First launch
 
-- Enter the Immich API key on the TV. The app is configured for `https://immich.theborns.xyz` and asks Immich for a random image every 30 seconds.
-- Use the **Next** button or Enter/right on the remote to skip. Use **Settings** or `S` to change the API key.
-- The key is saved in the app's local storage so it survives app restarts. It is not embedded in `.wgt`; anyone with access to the TV/app data could recover it, so use a read-only Immich key.
-- Immich must allow the TV app's cross-origin requests. Tizen's `<access>` policy is scoped to the configured Immich hostname, but the Immich server/reverse proxy must also allow CORS requests including the `x-api-key` header. A CORS or TLS error is shown on screen.
+- On the TV, open `https://immichwall.theborns.xyz/pair` on a phone or computer. Step 1: verify the five-digit PIN shown on the TV. Step 2: submit the Immich server URL and a read-only API key.
+- The TV validates the connection directly with Immich and, on error, reports it back to the phone, where it appears in red; the connection details stay editable on the phone until pairing completes. The TV saves the connection in Samsung Tizen KeyManager, confirms pairing, and the pairing service erases the submitted key in memory; it never proxies Immich photo traffic.
+- An unpaired TV shows only the pairing screen: the PIN refreshes automatically when it expires (no remote input needed), and no settings or other controls are reachable until pairing completes. During playback, right/OK skips ahead, left returns to the previous photo, and Up/Down opens the settings panel, which contains **Unpair**. The remote's **Play/Pause** key toggles rotation; separate Play and Pause keys resume or pause directly. On a keyboard, Space toggles pause.
+- The Immich server/reverse proxy must allow CORS requests from the TV app, including the `x-api-key` header. The Tizen app permits the Immich hostname entered on the phone; a CORS or TLS error is shown on the TV.
+- The phone page can correct the URL or key without another PIN until pairing completes. Pairing PINs expire after five minutes; active handoffs expire after one hour. Pending sessions are in memory, so after a service restart, start a new PIN.
+
+See [PAIRING.md](PAIRING.md) for the protocol, service behavior, and future ideas.
 
 ## Project layout
 
-- `tizen/`: Tizen Web App source and `config.xml`
-- `desktop/`: desktop slideshow UI and controls
-- `scripts/desktop-server.mjs`: local API proxy and static server
-- `Dockerfile.tizen`: official Tizen Studio Web CLI builder image
-- `docker/package-tizen.sh`: build, sign, and optionally install the `.wgt`
+- `frontend/`: the single shared frontend served to desktop browsers **and** compiled into the TV package. Capability differences (the local proxy vs direct Immich, the connect form vs PIN pairing, remote media keys) are handled at runtime by checking for the Tizen device API.
+  - `frontend/state.js`: slideshow settings/history state
+  - `frontend/connection.js`: connection driver (desktop proxy vs TV direct + KeyManager)
+  - `frontend/input.js`: keyboard and TV remote key mapping
+  - `frontend/pairing.js`: TV pairing API client
+  - `frontend/app.js`: shared slideshow controller, settings drawer, and pairing lifecycle
+- `tizen/`: TV packaging config only (`config.xml`, icon, Tizen project yaml)
+- `pair/`: phone setup page at `/pair`
+- `services/pairingService.mjs`: short-lived TV PIN sessions and handoffs
+- `Dockerfile.server`: slim image for hosting the pairing/desktop server (runtime code only)
+- `Dockerfile.tizen` / `docker/package-tizen.sh`: builds and signs the `.wgt` from `frontend/`
+- `config/immich.js`: centralized Immich configuration and dotenv parsing
 - `scripts/immich-poc.mjs`: local Node-based API/thumbnail smoke test
 
 ## References

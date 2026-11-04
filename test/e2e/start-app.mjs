@@ -10,9 +10,7 @@ const appHost = '127.0.0.1';
 const appPort = 41780;
 const mock = createMockImmich({ apiKey: 'playwright-test-key' });
 const app = createApp({
-    immichBaseUrl: `http://${mockHost}:${mockPort}`,
-    immichApiKey: 'playwright-test-key',
-    webRoot: resolve(root, 'desktop'),
+    webRoot: resolve(root, 'frontend'),
 });
 
 await new Promise((resolveListen, reject) => {
@@ -34,6 +32,9 @@ async function shutdown() {
     ]);
     process.exit(0);
 }
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
 
 process.once('SIGINT', shutdown);
 process.once('SIGTERM', shutdown);

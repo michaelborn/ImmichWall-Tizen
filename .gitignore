@@ -7,14 +7,15 @@
 tmp/
 output/
 .buildResult/
-SamsungTVImmichApp
-tizen
+tizen/Debug/
+tizen/.vscode/
 
 # Image artifacts
 *.wgt
 *.jpg
 *.jpeg
 *.png
+!tizen/icon.png
 *.webp
 node_modules/
 

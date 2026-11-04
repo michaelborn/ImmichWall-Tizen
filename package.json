@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "description": "Local desktop proof of concept for an Immich photo frame",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node scripts/desktop-server.mjs",
     "check": "node scripts/check.mjs",
@@ -11,10 +14,15 @@
     "test:integration": "node --test test/integration/*.test.mjs",
     "test:e2e": "playwright test --config=test/playwright.config.mjs",
     "test:live": "node --test test/live/*.test.mjs",
-    "test:all": "npm run check && npm run test:unit && npm run test:integration && npm run test:e2e"
+    "test:all": "npm run check && npm run test:unit && npm run test:integration && npm run test:e2e",
+    "deploy": "bash scripts/deploy-tizen.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
     "@xmldom/xmldom": "^0.9.12"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0"
   }
 }

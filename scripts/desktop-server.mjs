@@ -10,12 +10,12 @@ export async function startServer({
     host = process.env.HOST ?? '127.0.0.1',
     port = Number(process.env.PORT ?? 4173),
     environment = process.env,
-    envFilePath = resolve(root, '.env'),
+    envFilePath = process.env.IMMICH_ENV_FILE,
 } = {}) {
     const config = await loadConfig({ envFilePath, environment });
     const server = createApp({
         ...config,
-        webRoot: resolve(root, 'desktop'),
+        webRoot: resolve(root, 'frontend'),
     });
 
     await new Promise((resolveListen, reject) => {

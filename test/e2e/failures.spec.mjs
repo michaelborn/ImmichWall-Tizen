@@ -1,11 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { setMockState, waitForPhoto } from './helpers.mjs';
+import { connectThroughSetup, resetAppConnection, setMockState } from './helpers.mjs';
 
 test.beforeEach(async () => {
+    await resetAppConnection();
     await setMockState({
         searchMode: 'ok',
         thumbnailMode: 'ok',
         pingMode: 'ok',
+        aboutMode: 'ok',
         searchDelayMs: 0,
         thumbnailDelayMs: 0,
         resetRequests: true,
@@ -13,8 +15,8 @@ test.beforeEach(async () => {
 });
 
 test('keeps the displayed photo during Immich outage and resumes after recovery', async ({ page }) => {
-    await page.goto('/');
-    const firstPhoto = await waitForPhoto(page);
+    await connectThroughSetup(page);
+    const firstPhoto = await page.locator('.photo-layer.visible img').getAttribute('src');
 
     await setMockState({ searchMode: 'error' });
     await page.locator('#next').click();
@@ -29,8 +31,8 @@ test('keeps the displayed photo during Immich outage and resumes after recovery'
 });
 
 test('keeps the existing image for an empty source and a corrupt thumbnail', async ({ page }) => {
-    await page.goto('/');
-    const firstPhoto = await waitForPhoto(page);
+    await connectThroughSetup(page);
+    const firstPhoto = await page.locator('.photo-layer.visible img').getAttribute('src');
 
     await setMockState({ searchMode: 'empty' });
     await page.locator('#next').click();

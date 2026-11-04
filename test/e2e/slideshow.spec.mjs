@@ -1,11 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { mockState, setMockState, waitForPhoto } from './helpers.mjs';
+import { connectThroughSetup, mockState, resetAppConnection, setMockState } from './helpers.mjs';
 
 test.beforeEach(async () => {
+    await resetAppConnection();
     await setMockState({
         searchMode: 'ok',
         thumbnailMode: 'ok',
         pingMode: 'ok',
+        aboutMode: 'ok',
         searchDelayMs: 0,
         thumbnailDelayMs: 0,
         resetRequests: true,
@@ -13,8 +15,8 @@ test.beforeEach(async () => {
 });
 
 test('loads a photo and supports next, previous, pause, details, and fullscreen', async ({ page }) => {
-    await page.goto('/');
-    const firstPhoto = await waitForPhoto(page);
+    await connectThroughSetup(page);
+    const firstPhoto = await page.locator('.photo-layer.visible img').getAttribute('src');
     await expect(page.locator('#position')).toHaveText('01');
 
     await page.keyboard.press('ArrowRight');
@@ -43,8 +45,7 @@ test('loads a photo and supports next, previous, pause, details, and fullscreen'
 
 test('auto-hides the control chrome and reveals it again on pointer activity', async ({ page }) => {
     await page.clock.install();
-    await page.goto('/');
-    await waitForPhoto(page);
+    await connectThroughSetup(page);
     await page.clock.fastForward(4300);
     await expect(page.locator('body')).toHaveClass(/chrome-hidden/);
 
@@ -54,13 +55,12 @@ test('auto-hides the control chrome and reveals it again on pointer activity', a
 
 test('rotates on the configured interval and does not poll while paused', async ({ page }) => {
     await page.clock.install();
-    await page.goto('/');
-    await waitForPhoto(page);
+    await connectThroughSetup(page);
     await page.locator('#open-settings').click();
-    await page.locator('#interval').selectOption('1');
+    await page.locator('#interval').selectOption('10');
     await page.locator('#save-settings').click();
 
-    await page.clock.fastForward(60000);
+    await page.clock.fastForward(10000);
     await expect(page.locator('#position')).toHaveText('02');
 
     await setMockState({ resetRequests: true });
@@ -75,8 +75,10 @@ test('rotates on the configured interval and does not poll while paused', async 
         Object.defineProperty(document, 'hidden', { configurable: true, value: false });
         document.dispatchEvent(new Event('visibilitychange'));
     });
-    await page.clock.fastForward(60000);
-    await expect(page.locator('#position')).toHaveText('03');
+    await expect.poll(async () => {
+        await page.clock.fastForward(10000);
+        return Number(await page.locator('#position').textContent());
+    }, { timeout: 15000 }).toBeGreaterThan(3);
 
     await setMockState({ resetRequests: true });
     await page.keyboard.press('Space');
@@ -95,8 +97,7 @@ test('keeps navigation history bounded during a long session', async ({ page }) 
             return original(url);
         };
     });
-    await page.goto('/');
-    await waitForPhoto(page);
+    await connectThroughSetup(page);
     for (let index = 0; index < 23; index++) {
         await page.locator('#next').click();
         await expect(page.locator('#position')).toHaveText(String(Math.min(index + 2, 20)).padStart(2, '0'));
@@ -109,8 +110,7 @@ test('keeps navigation history bounded during a long session', async ({ page }) 
 
 test('remains functional when reduced motion is requested', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/');
-    await waitForPhoto(page);
+    await connectThroughSetup(page);
     await page.keyboard.press('ArrowRight');
     await expect(page.locator('#position')).toHaveText('02');
 });

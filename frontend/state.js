@@ -4,19 +4,23 @@
     var DEFAULT_SETTINGS = Object.freeze({
         source: 'all',
         albumId: '',
-        interval: 5,
+        interval: 300,
         fit: 'cover'
     });
-    var SETTINGS_KEY = 'immich-wall-desktop-settings';
+    var ALLOWED_INTERVALS = Object.freeze([10, 30, 60, 300, 600, 1800, 3600]);
+    var SETTINGS_KEY = 'immich-wall-settings';
     var MAX_HISTORY = 20;
 
     function loadSettings(storage) {
+        var settings;
         try {
             var stored = JSON.parse(storage.getItem(SETTINGS_KEY) || '{}');
-            return Object.assign({}, DEFAULT_SETTINGS, stored);
+            settings = Object.assign({}, DEFAULT_SETTINGS, stored);
         } catch (error) {
-            return Object.assign({}, DEFAULT_SETTINGS);
+            settings = Object.assign({}, DEFAULT_SETTINGS);
         }
+        if (ALLOWED_INTERVALS.indexOf(settings.interval) === -1) settings.interval = DEFAULT_SETTINGS.interval;
+        return settings;
     }
 
     function sourceKey(source, albumId) {
@@ -31,7 +35,7 @@
     }
 
     function appendHistory(history, historyIndex, entry, maxHistory) {
-        var limit = maxHistory ?? MAX_HISTORY;
+        var limit = maxHistory == null ? MAX_HISTORY : maxHistory;
         var next = history.slice(0, historyIndex + 1);
         var removed = history.slice(historyIndex + 1);
         next.push(entry);
@@ -44,11 +48,13 @@
     }
 
     function nextRetryDelay(currentDelay, maximum) {
-        return Math.min(currentDelay * 2, maximum ?? 300000);
+        var cap = maximum == null ? 300000 : maximum;
+        return Math.min(currentDelay * 2, cap);
     }
 
     var api = {
         DEFAULT_SETTINGS: DEFAULT_SETTINGS,
+        ALLOWED_INTERVALS: ALLOWED_INTERVALS,
         SETTINGS_KEY: SETTINGS_KEY,
         MAX_HISTORY: MAX_HISTORY,
         loadSettings: loadSettings,

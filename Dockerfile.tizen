@@ -53,6 +53,7 @@ ENV APP_DIR=/app
 WORKDIR /app
 
 COPY --chown=developer:developer tizen/ /app/
+COPY --chown=developer:developer frontend/ /app/
 COPY --chmod=755 docker/package-tizen.sh /usr/local/bin/package-tizen
 
 ENTRYPOINT ["/usr/local/bin/package-tizen"]

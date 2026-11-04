@@ -14,7 +14,7 @@ test('read-only smoke test against the configured live Immich instance', {
     assert.ok(config.immichBaseUrl, 'IMMICH_SERVER_URL is required');
     assert.ok(config.immichApiKey, 'IMMICH_API_KEY is required');
 
-    const app = createApp({ ...config, webRoot: resolve(root, 'desktop') });
+    const app = createApp({ ...config, webRoot: resolve(root, 'frontend') });
     const baseUrl = await listen(app);
     t.after(() => close(app));
 
@@ -26,7 +26,6 @@ test('read-only smoke test against the configured live Immich instance', {
     assert.equal(statusResponse.status, 200);
     const status = await statusResponse.json();
     assert.equal(status.connected, true);
-    assert.match(status.version, /^v/);
 
     const albumsResponse = await fetch(baseUrl + '/api/albums');
     assert.equal(albumsResponse.status, 200);

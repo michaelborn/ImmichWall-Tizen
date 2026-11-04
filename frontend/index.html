@@ -11,12 +11,32 @@
     <main id="stage" class="stage">
         <div class="photo-layer visible"><img id="photo-a" alt=""></div>
         <div class="photo-layer"><img id="photo-b" alt=""></div>
+
+        <div id="pair-view" class="pair-view tv-only" hidden>
+            <div class="brand-mark" aria-hidden="true">i</div>
+            <p class="eyebrow">CONNECT THIS TV</p>
+            <h1>Immich Wall</h1>
+            <p>On your phone or computer, open<br><strong>https://immichwall.theborns.xyz/pair</strong></p>
+            <p>Step 1: verify the PIN below. Step 2: add your Immich server URL and API key on the phone.</p>
+            <p id="pair-pin" class="pair-pin" aria-live="polite">Starting…</p>
+            <p id="pair-expiry" class="pair-expiry">The PIN refreshes automatically when it expires.</p>
+            <p class="pair-hint">The TV stores your connection securely after the phone validates it. If the phone reports an error, update the details there.</p>
+        </div>
+
         <div id="empty-state" class="empty-state">
             <div class="brand-mark" aria-hidden="true">i</div>
             <p class="eyebrow">YOUR LIBRARY, ON DISPLAY</p>
             <h1>Immich Wall</h1>
-            <p id="empty-message">Connecting to your Immich server…</p>
-            <button id="empty-retry" class="button button-primary" type="button">Try again</button>
+            <p id="empty-message">Connect to your Immich server to begin.</p>
+            <form id="connect-form" class="connect-form desktop-only">
+                <label for="connect-server">Immich server URL</label>
+                <input id="connect-server" name="server" type="url" value="https://immich.theborns.xyz" required autocomplete="url" spellcheck="false">
+                <label for="connect-api-key">Immich API key</label>
+                <input id="connect-api-key" name="api-key" type="password" required autocomplete="new-password">
+                <button id="connect-submit" class="button button-primary" type="submit">Connect &amp; start</button>
+            </form>
+            <button id="empty-retry" class="button button-primary" type="button" hidden>Try again</button>
+            <p class="setup-note desktop-only">The key is held in server memory for this session only. It is not saved in browser storage or loaded from `.env`.</p>
         </div>
     </main>
 
@@ -43,14 +63,14 @@
     <nav id="controls" class="chrome controls" aria-label="Slideshow controls">
         <div class="photo-position"><span id="position">—</span></div>
         <div class="transport">
-            <button id="previous" class="icon-button" type="button" aria-label="Previous photo" title="Previous (←)" disabled>
+            <button id="previous" class="icon-button desktop-only" type="button" aria-label="Previous photo" title="Previous (←)" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zm12.5 1.3v11.4L9 12z"/></svg>
             </button>
-            <button id="pause" class="icon-button play-button" type="button" aria-label="Pause slideshow" title="Pause (Space)">
+            <button id="pause" class="icon-button play-button desktop-only" type="button" aria-label="Pause slideshow" title="Pause (Space)">
                 <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zm8 0h4v14h-4z"/></svg>
                 <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>
             </button>
-            <button id="next" class="icon-button" type="button" aria-label="Next photo" title="Next (→)">
+            <button id="next" class="icon-button desktop-only" type="button" aria-label="Next photo" title="Next (→)">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM5.5 6.3v11.4L15 12z"/></svg>
             </button>
         </div>
@@ -58,7 +78,7 @@
             <button id="info" class="icon-button" type="button" aria-label="Show photo information" title="Photo information (I)">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20m0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16m-1-9h2v6h-2zm0-4h2v2h-2z"/></svg>
             </button>
-            <button id="fullscreen" class="icon-button" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
+            <button id="fullscreen" class="icon-button desktop-only" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z"/></svg>
             </button>
             <button id="open-settings" class="icon-button settings-button" type="button" aria-label="Open settings" title="Settings (S)">
@@ -108,12 +128,13 @@
                 </div>
                 <label class="field-label" for="interval">Change photo every</label>
                 <select id="interval" class="select-field">
-                    <option value="1">1 minute</option>
-                    <option value="3">3 minutes</option>
-                    <option value="5">5 minutes</option>
-                    <option value="10">10 minutes</option>
-                    <option value="15">15 minutes</option>
-                    <option value="30">30 minutes</option>
+                    <option value="10">10 seconds</option>
+                    <option value="30">30 seconds</option>
+                    <option value="60">1 minute</option>
+                    <option value="300">5 minutes</option>
+                    <option value="600">10 minutes</option>
+                    <option value="1800">30 minutes</option>
+                    <option value="3600">60 minutes</option>
                 </select>
             </section>
 
@@ -133,7 +154,10 @@
                 </div>
                 <div class="connection-status"><span id="settings-dot" class="connection-dot"></span><span id="settings-connection">Checking connection…</span></div>
                 <button id="test-connection" class="button button-secondary" type="button">Test connection</button>
-                <p class="privacy-note">Your API key stays in the local server process and is never sent to the browser.</p>
+                <button id="change-connection" class="text-button desktop-only" type="button">Change server or API key</button>
+                <button id="unpair-tv" class="button button-secondary tv-only" type="button">Unpair this TV</button>
+                <p class="privacy-note desktop-only">Your API key is sent to the local server when you connect, then kept only in server memory—not saved in browser storage or on disk.</p>
+                <p class="privacy-note tv-only">Your connection is stored securely in Samsung KeyManager on this TV. Unpairing removes it.</p>
             </section>
         </div>
 
@@ -144,6 +168,10 @@
     </aside>
 
     <script src="state.js"></script>
+    <script src="input.js"></script>
+    <script src="secure-store.js"></script>
+    <script src="pairing.js"></script>
+    <script src="connection.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

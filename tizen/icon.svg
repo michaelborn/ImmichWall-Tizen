@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="516" height="516" viewBox="0 0 516 516">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#20271c"/>
+      <stop offset="1" stop-color="#0a0d0b"/>
+    </linearGradient>
+    <linearGradient id="photo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#293e39"/>
+      <stop offset="1" stop-color="#151e1a"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  <rect width="516" height="516" rx="116" fill="url(#background)"/>
+  <circle cx="258" cy="246" r="174" fill="#d7f36b" opacity=".09" filter="url(#glow)"/>
+  <rect x="78" y="100" width="360" height="286" rx="42" fill="#0c100e" stroke="#d7f36b" stroke-width="12"/>
+  <rect x="95" y="117" width="326" height="252" rx="27" fill="url(#photo)"/>
+  <circle cx="344" cy="183" r="30" fill="#f5c96b"/>
+  <path d="M96 321 187 225l66 66 48-47 120 125H96z" fill="#698e6c"/>
+  <path d="m188 225 28 29-29-9-24 26-20-8z" fill="#b8d58a"/>
+  <path d="m253 291 48-47 52 54-42-23-28 22-24-15-27 22-44-28z" fill="#d7f36b"/>
+  <path d="M96 334v35h325v-25l-44-35-48 23-45-16-47 31-58-27-43 28z" fill="#21372d" opacity=".9"/>
+  <rect x="207" y="414" width="102" height="12" rx="6" fill="#d7f36b" opacity=".92"/>
+</svg>
