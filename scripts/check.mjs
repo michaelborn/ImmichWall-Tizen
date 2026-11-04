@@ -16,6 +16,7 @@ const javascriptFiles = [
     'frontend/input.js',
     'frontend/secure-store.js',
     'frontend/pairing.js',
+    'frontend/build-version.js',
     'frontend/connection.js',
     'frontend/app.js',
     'pair/app.js',

@@ -6,6 +6,7 @@
     var Pair = window.ImmichTvPairing;
     var driver = window.ImmichWallConnection.create();
     var isTv = driver.kind === 'tv';
+    var APP_VERSION = 'v0.2.0';
 
     var layers = [
         { wrapper: document.querySelectorAll('.photo-layer')[0], image: document.getElementById('photo-a') },
@@ -73,6 +74,8 @@
     var lastClaimAttemptAt = 0;
 
     document.body.classList.toggle('tv', isTv);
+    document.getElementById('app-version').textContent = window.ImmichWallBuildVersion || APP_VERSION;
+    document.getElementById('build-version').textContent = 'Build ' + (window.ImmichWallBuildVersion || APP_VERSION);
     Input.registerMediaKeys();
 
     function saveSettings() {

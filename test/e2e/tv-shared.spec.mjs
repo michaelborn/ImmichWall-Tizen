@@ -34,6 +34,7 @@ test('TV mode talks to Immich directly and shares the desktop settings drawer', 
     await expect(page.locator('body')).toHaveClass(/tv/);
     await expect(page.locator('#connect-form')).toBeHidden();
     await expect(page.locator('img[src^="blob:"]')).toHaveCount(1);
+    await expect(page.locator('#build-version')).toContainText('Build v');
     const state = await mockState();
     expect(state.requestLog.every((request) => request.hasApiKey)).toBe(true);
 

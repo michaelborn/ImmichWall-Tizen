@@ -48,6 +48,7 @@
         <div class="connection">
             <span id="connection-dot" class="connection-dot"></span>
             <span id="connection-label">Connecting</span>
+            <span id="app-version" class="version"></span>
             <span id="server-version" class="version"></span>
         </div>
     </header>
@@ -153,6 +154,7 @@
                     <div><h3>Immich connection</h3><p id="settings-server">Reading local .env…</p></div>
                 </div>
                 <div class="connection-status"><span id="settings-dot" class="connection-dot"></span><span id="settings-connection">Checking connection…</span></div>
+                <p id="build-version" class="build-version"></p>
                 <button id="test-connection" class="button button-secondary" type="button">Test connection</button>
                 <button id="change-connection" class="text-button desktop-only" type="button">Change server or API key</button>
                 <button id="unpair-tv" class="button button-secondary tv-only" type="button">Unpair this TV</button>
@@ -171,6 +173,7 @@
     <script src="input.js"></script>
     <script src="secure-store.js"></script>
     <script src="pairing.js"></script>
+    <script src="build-version.js"></script>
     <script src="connection.js"></script>
     <script src="app.js"></script>
 </body>

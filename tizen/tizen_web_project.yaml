@@ -30,6 +30,7 @@ trust_anchor: []
 # Dockerfile copies frontend/ next to this project's config.xml at build time.
 files:
   - app.js
+  - build-version.js
   - connection.js
   - index.html
   - input.js

@@ -15,7 +15,7 @@ COPY server/ ./server/
 COPY routes/ ./routes/
 COPY controllers/ ./controllers/
 COPY services/ ./services/
-COPY desktop/ ./desktop/
+COPY frontend/ ./frontend/
 COPY pair/ ./pair/
 
 USER node
