@@ -74,6 +74,14 @@ export class ImmichService {
         return response.json();
     }
 
+    async searchRandom(body) {
+        const response = await this.request('/api/search/random', {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+        return response.json();
+    }
+
     async checkPhotoAccess() {
         const result = await this.searchMetadata({ type: 'IMAGE', page: 1, size: 1 });
         if (!result.assets || !Array.isArray(result.assets.items)) {
@@ -100,14 +108,25 @@ export class ImmichService {
             }));
     }
 
-    async getRandomPhoto({ source = 'all', albumId = '', excludeId = '' } = {}) {
-        if (!['all', 'favorites', 'album'].includes(source)) {
-            throw new ImmichHttpError(400, 'Unknown photo source.');
+    pickPhoto(assets, excludeId) {
+        let candidates = assets.filter((asset) => asset && asset.id);
+        if (excludeId && candidates.length > 1) {
+            const filtered = candidates.filter((asset) => asset.id !== excludeId);
+            if (filtered.length) candidates = filtered;
         }
-        if (source === 'album' && !/^[\da-f-]{36}$/i.test(albumId)) {
-            throw new ImmichHttpError(400, 'Choose a valid album before starting the slideshow.');
-        }
+        if (!candidates.length) throw new ImmichHttpError(404, 'No photos found for this source.');
+        const asset = candidates[Math.floor(this.random() * candidates.length)];
+        return {
+            id: asset.id,
+            fileName: asset.originalFileName || 'Immich photo',
+            width: asset.width || null,
+            height: asset.height || null,
+            date: asset.fileCreatedAt || asset.createdAt || null,
+            favorite: Boolean(asset.isFavorite),
+        };
+    }
 
+    async legacyGetRandomPhoto({ source, albumId, excludeId }) {
         const search = (page) => {
             const body = { type: 'IMAGE', page, size: this.pageSize };
             if (source === 'favorites') body.isFavorite = true;
@@ -120,23 +139,30 @@ export class ImmichService {
         const pageCount = Math.max(1, Math.ceil(total / this.pageSize));
         const randomPage = Math.floor(this.random() * pageCount) + 1;
         const result = randomPage === 1 ? firstPage : await search(randomPage);
-        const assets = result.assets?.items ?? [];
-        if (!assets.length) throw new ImmichHttpError(404, 'No photos found for this source.');
+        return this.pickPhoto(result.assets?.items ?? [], excludeId);
+    }
 
-        let candidates = assets;
-        if (excludeId && assets.length > 1) {
-            const withoutPrevious = assets.filter((asset) => asset.id !== excludeId);
-            if (withoutPrevious.length) candidates = withoutPrevious;
+    async getRandomPhoto({ source = 'all', albumId = '', excludeId = '' } = {}) {
+        if (!['all', 'favorites', 'album'].includes(source)) {
+            throw new ImmichHttpError(400, 'Unknown photo source.');
         }
-        const asset = candidates[Math.floor(this.random() * candidates.length)];
-        return {
-            id: asset.id,
-            fileName: asset.originalFileName ?? 'Immich photo',
-            width: asset.width ?? null,
-            height: asset.height ?? null,
-            date: asset.fileCreatedAt ?? asset.createdAt ?? null,
-            favorite: Boolean(asset.isFavorite),
-        };
+        if (source === 'album' && !/^[\da-f-]{36}$/i.test(albumId)) {
+            throw new ImmichHttpError(400, 'Choose a valid album before starting the slideshow.');
+        }
+
+        const body = { type: 'IMAGE', size: 25 };
+        if (source === 'favorites') body.isFavorite = true;
+        if (source === 'album') body.albumIds = [albumId];
+
+        try {
+            const assets = await this.searchRandom(body);
+            return this.pickPhoto(Array.isArray(assets) ? assets : [], excludeId);
+        } catch (error) {
+            if (error instanceof ImmichHttpError && error.status === 404) {
+                return this.legacyGetRandomPhoto({ source, albumId, excludeId });
+            }
+            throw error;
+        }
     }
 
     async getThumbnail(assetId) {

@@ -24,7 +24,7 @@ test('selects favorites or an album and persists framing and interval preference
     await expect(page.locator('#settings-panel')).not.toHaveClass(/open/);
     await expect.poll(async () => {
         const state = await mockState();
-        return state.searchBodies.some((body) => body.isFavorite === true);
+        return state.randomBodies.some((body) => body.isFavorite === true);
     }).toBe(true);
 
     await page.keyboard.press('s');
@@ -40,7 +40,7 @@ test('selects favorites or an album and persists framing and interval preference
     await expect(page.locator('body')).toHaveClass(/fit-contain/);
     await expect.poll(async () => {
         const state = await mockState();
-        return state.searchBodies.some((body) => body.albumIds?.includes(albumId));
+        return state.randomBodies.some((body) => body.albumIds?.includes(albumId));
     }).toBe(true);
 
     await page.reload();

@@ -43,7 +43,7 @@ test('TV mode talks to Immich directly and shares the desktop settings drawer', 
     await page.locator('#save-settings').click();
     await expect.poll(async () => {
         const current = await mockState();
-        return current.searchBodies.some((body) => body.isFavorite === true);
+        return current.randomBodies.some((body) => body.isFavorite === true);
     }).toBe(true);
 
     await page.keyboard.press('s');
@@ -56,7 +56,7 @@ test('TV mode talks to Immich directly and shares the desktop settings drawer', 
     await expect(page.locator('body')).toHaveClass(/fit-contain/);
     await expect.poll(async () => {
         const current = await mockState();
-        return current.searchBodies.some((body) => body.albumIds?.[0] === REGULAR_ALBUM_ID);
+        return current.randomBodies.some((body) => body.albumIds?.[0] === REGULAR_ALBUM_ID);
     }).toBe(true);
     await expect(page.locator('#album option:checked')).toContainText('Weekend at the Lake');
 
@@ -84,7 +84,7 @@ test('TV album mode can target the large album too', async ({ page }) => {
     await page.locator('#save-settings').click();
     await expect.poll(async () => {
         const current = await mockState();
-        return current.searchBodies.some((body) => body.albumIds?.[0] === LARGE_ALBUM_ID);
+        return current.randomBodies.some((body) => body.albumIds?.[0] === LARGE_ALBUM_ID);
     }).toBe(true);
 });
 

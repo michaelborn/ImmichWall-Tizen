@@ -107,6 +107,28 @@
             return Boolean(connection.serverUrl && connection.apiKey);
         }
 
+        function legacyRandomPhoto(filters) {
+            var body = { page: 1, size: PAGE_SIZE };
+            if (filters.source === 'favorites') body.isFavorite = true;
+            if (filters.source === 'album') body.albumIds = [filters.albumId];
+            return search(body).then(function (firstPage) {
+                var total = firstPage && firstPage.assets ? Number(firstPage.assets.total || 0) : 0;
+                if (!total) throw new Error('No photos found for this source.');
+                var page = choosePage(total, PAGE_SIZE, Math.random);
+                if (page === 1) return firstPage;
+                return search(Object.assign({}, body, { page: page }));
+            }).then(function (result) {
+                var items = result.assets && result.assets.items ? result.assets.items : [];
+                if (!items.length) throw new Error('No photos found for this source.');
+                var asset = chooseAsset(items, filters.excludeId, Math.random);
+                return {
+                    id: asset.id,
+                    fileName: asset.originalFileName || 'Immich photo',
+                    date: asset.fileCreatedAt || asset.createdAt || null,
+                };
+            });
+        }
+
         function search(body) {
             if (!isConfigured()) return Promise.reject(new Error('This TV has no saved Immich connection.'));
             return request(connection.serverUrl + '/api/search/metadata', 'POST', connection.apiKey, Object.assign({ type: 'IMAGE' }, body));
@@ -167,17 +189,11 @@
                 return request(connection.serverUrl + '/api/albums', 'GET', connection.apiKey).then(normalizeAlbums);
             },
             randomPhoto({ source, albumId, excludeId }) {
-                var body = { page: 1, size: PAGE_SIZE };
+                var body = { type: 'IMAGE', size: 25 };
                 if (source === 'favorites') body.isFavorite = true;
                 if (source === 'album') body.albumIds = [albumId];
-                return search(body).then(function (firstPage) {
-                    var total = firstPage && firstPage.assets ? Number(firstPage.assets.total || 0) : 0;
-                    if (!total) throw new Error('No photos found for this source.');
-                    var page = choosePage(total, PAGE_SIZE, Math.random);
-                    if (page === 1) return firstPage;
-                    return search(Object.assign({}, body, { page: page }));
-                }).then(function (result) {
-                    var items = result.assets && result.assets.items ? result.assets.items : [];
+                return request(connection.serverUrl + '/api/search/random', 'POST', connection.apiKey, body).then(function (assets) {
+                    var items = Array.isArray(assets) ? assets : [];
                     if (!items.length) throw new Error('No photos found for this source.');
                     var asset = chooseAsset(items, excludeId, Math.random);
                     return {
@@ -185,6 +201,9 @@
                         fileName: asset.originalFileName || 'Immich photo',
                         date: asset.fileCreatedAt || asset.createdAt || null,
                     };
+                }).catch(function (error) {
+                    if (error.status !== 404) throw error;
+                    return legacyRandomPhoto({ source: source, albumId: albumId, excludeId: excludeId });
                 });
             },
             thumbnail(assetId) {

@@ -53,6 +53,8 @@ export function createMockImmich({ apiKey = 'test-api-key', version = 'v-test.0'
         thumbnailDelayMs: 0,
         requestLog: [],
         searchBodies: [],
+        randomBodies: [],
+        randomCount: 0,
     };
 
     const albums = [
@@ -98,6 +100,8 @@ export function createMockImmich({ apiKey = 'test-api-key', version = 'v-test.0'
                 if (changes.resetRequests) {
                     state.requestLog = [];
                     state.searchBodies = [];
+                    state.randomBodies = [];
+                    state.randomCount = 0;
                 }
                 return sendJson(response, 200, state);
             } catch {
@@ -132,6 +136,43 @@ export function createMockImmich({ apiKey = 'test-api-key', version = 'v-test.0'
 
         if (url.pathname === '/api/albums' && request.method === 'GET') {
             return sendJson(response, 200, albums);
+        }
+
+        if (url.pathname === '/api/search/random' && request.method === 'POST') {
+            if (state.searchMode === 'random-missing') return sendJson(response, 404, { message: 'Not found' });
+            if (state.searchMode === 'reset') return request.socket.destroy();
+            if (state.searchMode === 'auth') return sendJson(response, 401, { message: 'Unauthorized' });
+            if (state.searchMode === 'error') return sendJson(response, 500, { message: 'Mock Immich failure' });
+            if (state.searchMode === 'invalid-json') {
+                response.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
+                return response.end('{invalid-json');
+            }
+
+            let body;
+            try {
+                body = await readJson(request);
+            } catch {
+                return sendJson(response, 400, { message: 'Invalid random-search body' });
+            }
+            state.randomBodies.push(body);
+
+            let candidates = assets;
+            if (body.type && body.type !== 'IMAGE') candidates = [];
+            if (body.isFavorite === true) candidates = candidates.filter((asset) => asset.isFavorite);
+            if (Array.isArray(body.albumIds)) {
+                if (body.albumIds.includes(albumIds.regular)) candidates = assets.slice(0, 8);
+                else if (body.albumIds.includes(albumIds.large)) candidates = assets;
+                else candidates = [];
+            }
+            if (state.searchMode === 'empty') candidates = [];
+            if (state.searchMode === 'single') candidates = candidates.slice(0, 1);
+
+            if (!candidates.length) return sendJson(response, 200, []);
+            const size = Math.max(1, Math.min(Number(body.size) || 25, candidates.length, 1000));
+            const offset = (state.randomCount * 7) % candidates.length;
+            state.randomCount += 1;
+            const rotated = candidates.slice(offset).concat(candidates.slice(0, offset));
+            return sendJson(response, 200, rotated.slice(0, size));
         }
 
         if (url.pathname === '/api/search/metadata' && request.method === 'POST') {

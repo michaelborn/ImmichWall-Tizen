@@ -20,6 +20,8 @@ async function resetMock() {
         thumbnailDelayMs: 0,
         requestLog: [],
         searchBodies: [],
+        randomBodies: [],
+        randomCount: 0,
     });
 }
 
@@ -67,22 +69,21 @@ describe('desktop server routes', () => {
         });
     });
 
-    it('searches all photos and returns normalized asset metadata', async () => {
+    it('searches all photos with the server-side random endpoint', async () => {
         const { response, body } = await json('/api/photos/random?source=all');
         assert.equal(response.status, 200);
-        assert.equal(body.id, fixture.mock.assets[0].id);
-        assert.equal(body.fileName, 'test-photo-0001.jpg');
+        assert.match(body.id, /^[\da-f-]{36}$/i);
         assert.equal(body.width, 1920);
-        assert.equal(fixture.mock.mockState.searchBodies[0].type, 'IMAGE');
-        assert.equal(fixture.mock.mockState.searchBodies[0].page, 1);
-        assert.equal(fixture.mock.mockState.searchBodies[0].size, 100);
+        assert.equal(fixture.mock.mockState.randomBodies[0].type, 'IMAGE');
+        assert.equal(fixture.mock.mockState.randomBodies[0].size, 25);
+        assert.equal(Object.hasOwn(fixture.mock.mockState.randomBodies[0], 'isFavorite'), false);
     });
 
     it('filters favorites upstream', async () => {
         const { response, body } = await json('/api/photos/random?source=favorites');
         assert.equal(response.status, 200);
         assert.equal(body.favorite, true);
-        assert.equal(fixture.mock.mockState.searchBodies[0].isFavorite, true);
+        assert.equal(fixture.mock.mockState.randomBodies[0].isFavorite, true);
     });
 
     it('filters to a selected album upstream', async () => {
@@ -90,7 +91,7 @@ describe('desktop server routes', () => {
         const { response, body } = await json(`/api/photos/random?source=album&albumId=${albumId}`);
         assert.equal(response.status, 200);
         assert.ok(fixture.mock.assets.slice(0, 8).some((asset) => asset.id === body.id));
-        assert.deepEqual(fixture.mock.mockState.searchBodies[0].albumIds, [albumId]);
+        assert.deepEqual(fixture.mock.mockState.randomBodies[0].albumIds, [albumId]);
     });
 
     it('avoids immediately returning the excluded asset when alternatives exist', async () => {
@@ -108,9 +109,10 @@ describe('desktop server routes', () => {
         assert.equal(body.id, onlyAsset);
     });
 
-    it('can request a later page for a large library', async (t) => {
+    it('falls back to paginated search when the Immich server lacks the random endpoint', async (t) => {
         await t.after(fixture.close);
         fixture = await startTestApp({ immichTimeoutMs: 300, random: () => 0.999 });
+        fixture.mock.mockState.searchMode = 'random-missing';
         const { response, body } = await json('/api/photos/random?source=all');
         assert.equal(response.status, 200);
         assert.ok(body.id);
