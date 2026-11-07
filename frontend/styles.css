@@ -183,6 +183,7 @@ body.is-paused .paused-indicator { opacity: 1; transform: translate(-50%,-50%) s
 }
 
 /* Shared frontend, TV capability */
+.tv-device #empty-state { display: none !important; }
 body.tv .desktop-only { display: none !important; }
 body:not(.tv) .tv-only { display: none !important; }
 body.pairing .chrome { display: none !important; }

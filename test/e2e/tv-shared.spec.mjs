@@ -107,8 +107,24 @@ test('TV hides transport and fullscreen chrome but keeps info and settings', asy
     await expect(page.locator('#open-settings')).toBeVisible();
 });
 
-test('drawer controls show visible focus on TV, including the fit cards', async ({ page }) => {
+test('a configured TV boots straight to the viewer, never showing the connect screen', async ({ page }) => {
     await page.goto(APP_URL);
+    await expect(page.locator('#empty-state')).toBeHidden();
+    await expect(page.locator('img[src^="blob:"]')).toHaveCount(1);
+});
+
+test('remote control keeps working after closing the drawer with Back', async ({ page }) => {
+    await page.goto(APP_URL);
+    await expect(page.locator('img[src^="blob:"]')).toHaveCount(1);
+    await page.keyboard.press('s');
+    await expect(page.locator('#settings-panel')).toHaveClass(/open/);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#settings-panel')).not.toHaveClass(/open/);
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(async () => Number(await page.locator('#position').textContent()), { timeout: 10000 }).toBe(2);
+});
+
+test('drawer controls show visible focus on TV, including the fit cards', async ({ page }) => {    await page.goto(APP_URL);
     await expect(page.locator('img[src^="blob:"]')).toHaveCount(1);
     await page.keyboard.press('s');
     await expect(page.locator('#settings-panel')).toHaveClass(/open/);

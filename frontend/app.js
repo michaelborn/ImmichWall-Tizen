@@ -375,6 +375,11 @@
         elements.settingsPanel.setAttribute('aria-hidden', 'true');
         elements.settingsScrim.classList.remove('open');
         revealChrome();
+        if (document.activeElement &&
+            typeof document.activeElement.blur === 'function' &&
+            elements.settingsPanel.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
         if (focusBeforeSettings && typeof focusBeforeSettings.focus === 'function') {
             focusBeforeSettings.focus();
         }
@@ -474,6 +479,7 @@
     async function enterSlideshow(serverUrlText) {
         connectionActive = true;
         document.body.classList.remove('pairing');
+        elements.empty.classList.add('connected', 'hidden');
         resetPhotos();
         elements.settingsServer.textContent = serverUrlText || 'Immich connection ready';
         elements.pairView.hidden = true;
@@ -542,7 +548,7 @@
         } catch (error) {
             connectionActive = false;
             resetPhotos();
-            elements.empty.classList.remove('connected');
+            elements.empty.classList.remove('connected', 'hidden');
             elements.emptyMessage.textContent = error.message || 'Unable to connect to Immich.';
             elements.emptyRetry.hidden = true;
             setConnection('offline', 'Connection failed');
