@@ -188,6 +188,31 @@ body.tv .desktop-only { display: none !important; }
 body:not(.tv) .tv-only { display: none !important; }
 body.pairing .chrome { display: none !important; }
 
+/* TV: hide the desktop chrome that is meaningless on a photo frame */
+body.tv .topbar { display: none !important; }
+body.tv .photo-position { display: none !important; }
+
+/* TV: scale the non-image UI up for larger/4K panels */
+body.tv .controls,
+body.tv .toast,
+body.tv .warning,
+body.tv .paused-indicator,
+body.tv .photo-info,
+body.tv .settings-panel,
+body.tv .pair-view,
+body.tv .empty-state { zoom: 1.5; }
+
+@media (min-width: 2600px) {
+    body.tv .controls,
+    body.tv .toast,
+    body.tv .warning,
+    body.tv .paused-indicator,
+    body.tv .photo-info,
+    body.tv .settings-panel,
+    body.tv .pair-view,
+    body.tv .empty-state { zoom: 2; }
+}
+
 /* TV focus is programmatic (never :focus-visible), so use plain :focus with a strong outline */
 body.tv button:focus,
 body.tv select:focus,

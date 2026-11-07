@@ -105,6 +105,10 @@ test('TV hides transport and fullscreen chrome but keeps info and settings', asy
     }
     await expect(page.locator('#info')).toBeVisible();
     await expect(page.locator('#open-settings')).toBeVisible();
+    await expect(page.locator('#topbar')).toBeHidden();
+    await expect(page.locator('.photo-position')).toBeHidden();
+    const zoom = await page.locator('#settings-panel').evaluate((panel) => getComputedStyle(panel).zoom);
+    expect(Number(zoom)).toBeGreaterThan(1);
 });
 
 test('a configured TV boots straight to the viewer, never showing the connect screen', async ({ page }) => {
@@ -134,7 +138,8 @@ test('drawer controls show visible focus on TV, including the fit cards', async 
     const outline = await page.locator('#save-settings').evaluate((button) => {
         return getComputedStyle(button).outlineWidth + ' ' + getComputedStyle(button).outlineColor;
     });
-    expect(outline).toContain('3px');
+    expect(outline).not.toContain('0px');
+    expect(outline).toContain('rgb(215, 243, 107)');
 
     await page.locator('input[name="fit"][value="cover"]').focus();
     await expect(page.locator('.choice-card').first()).toHaveClass(/focused/);
