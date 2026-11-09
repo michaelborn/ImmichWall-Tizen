@@ -29,5 +29,6 @@
 - `npm run test:all` — required full verification.
 - `npm run screenshots` — regenerate the mock-based, face-free README screenshots.
 - `npm run deploy` — build, install, and launch the Tizen app using `.env`; each WGT gets a timestamped build version. It also generates `output/runtime-config.env` for the SWAG server.
+- Use Conventional Commits on `main`: `feat:` is a minor release, `fix:`/other commits are patch releases, and `BREAKING CHANGE:` or `!` is a major release. CI commits the version/changelog update and creates the GitHub Release after tests pass.
 
 When changing shared UI, cover both desktop and TV capability modes in Playwright. Use only mock/abstract imagery in documentation screenshots; never capture personal Immich photos.

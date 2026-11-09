@@ -34,6 +34,8 @@ ImmichWall is a full-screen photo frame for Samsung Tizen TVs, backed by a self-
 
 **Tech stack:** shared vanilla JavaScript/HTML/CSS frontend, Node.js 20+, Express 5, Immich REST API, Samsung Tizen Web Device APIs, and Playwright.
 
+Conventional commits on `main` drive automatic releases: `feat:` bumps the minor version, `fix:` and other commits bump patch, and `BREAKING CHANGE:` (or `!`) bumps major. Each release updates the package/Tizen version, prepends a `CHANGELOG.md` entry, tags the release, and creates a GitHub Release.
+
 ```sh
 npm ci
 npm start                         # local desktop/server development

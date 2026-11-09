@@ -12,6 +12,7 @@ const javascriptFiles = [
     'scripts/desktop-server.mjs',
     'scripts/immich-poc.mjs',
     'scripts/capture-readme-screenshots.mjs',
+    'scripts/set-release-version.mjs',
     'scripts/check.mjs',
     'frontend/state.js',
     'frontend/input.js',

@@ -1,3 +1,14 @@
+# Changelog
+
+## [v0.2.0] - 2026-11-09
+
+### Features
+
+- Phone PIN pairing with secure TV credential storage.
+- Shared desktop/TV slideshow settings for source, interval, and framing.
+- Server-side random photo selection across the library, with album and Favorites filters.
+- TV remote controls for navigation, settings, pause/resume, and Unpair.
+
 ## [v0.1.9] - 2026-11-09
 
 ### Other
@@ -11,4 +22,3 @@
 - Fix TV random photo selection to cover the whole library (dd5cd1a)
 - Add TV pairing, unified frontend, and deploy tooling (7ec7f36)
 - Initial commit (ee8aa88)
-

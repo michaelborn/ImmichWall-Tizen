@@ -1,7 +1,9 @@
-name: Test
+name: Test and Release
 
 on:
   push:
+    branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -28,14 +30,147 @@ jobs:
         run: npm run test:all
 
   release:
-    # Every push to main ships a release. The version bump follows
-    # conventional commits:
-    #   breaking changes (BREAKING CHANGE footer or `!:` subject) -> M+1.0.0
-    #   feat subjects -> M.+1.0
-    #   everything else -> patch
-    # The grouped changelog is saved to changelog.md (newest first) and used
-    # as the release notes.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Every push to main creates a release: feat -> minor, BREAKING CHANGE/! ->
+    # major, fixes/other changes -> patch. Release commits update the changelog
+    # and keep npm, Tizen, and frontend version markers in sync.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip-release]')
+    needs: test
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-main
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Determine next version and changelog entry
+        id: release
+        shell: bash
+        run: |
+          latest=$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n 1)
+          package_version=$(node -p "require('./package.json').version")
+          if [ -n "$latest" ]; then
+            range="$latest..HEAD"
+            tagged_version=${latest#v}
+          else
+            range=HEAD
+            tagged_version=0.0.0
+          fi
+
+          # The tracked package version is the baseline if it is ahead of the
+          # latest tag (for example, when initializing release automation).
+          base_version=$(node -e '
+            const parse = (value) => value.split(".").map(Number);
+            const a = parse(process.argv[1]);
+            const b = parse(process.argv[2]);
+            for (let i = 0; i < 3; i += 1) {
+              if (a[i] > b[i]) { console.log(process.argv[1]); process.exit(0); }
+              if (a[i] < b[i]) { console.log(process.argv[2]); process.exit(0); }
+            }
+            console.log(process.argv[1]);
+          ' "$tagged_version" "$package_version")
+
+          commits=$(git log --no-merges --format='%h%x09%s' "$range")
+          if [ -z "$commits" ]; then
+            echo "No commits since the current release tag; skipping the branch release step."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          subjects=$(printf '%s\n' "$commits" | awk -F '\t' 'NF > 1 { print $2 }')
+          bodies=$(git log --no-merges --format='%B' "$range")
+          bump=patch
+          if printf '%s\n' "$bodies" | grep -qi 'BREAKING CHANGE:'; then bump=major; fi
+          if printf '%s\n' "$subjects" | grep -qE '^[a-z]+(\([^)]*\))?!:'; then bump=major; fi
+          if [ "$bump" != major ] && printf '%s\n' "$subjects" | grep -qE '^feat(\([^)]*\))?:'; then bump=minor; fi
+
+          next_version=$(node -e '
+            const [version, mode] = process.argv.slice(1);
+            const parts = version.split(".").map(Number);
+            if (mode === "major") console.log((parts[0] + 1) + ".0.0");
+            else if (mode === "minor") console.log(parts[0] + "." + (parts[1] + 1) + ".0");
+            else console.log(parts[0] + "." + parts[1] + "." + (parts[2] + 1));
+          ' "$base_version" "$bump")
+          tag="v$next_version"
+          printf 'Version base: %s; bump: %s; next: %s\n' "$base_version" "$bump" "$tag"
+
+          entry="$RUNNER_TEMP/changelog-entry.md"
+          {
+            printf '## [%s] - %s\n\n' "$tag" "$(date -u '+%Y-%m-%d')"
+            if [ "$bump" = major ]; then
+              printf '### Breaking changes\n\n'
+              printf '%s\n' "$subjects" | awk '/^[a-z]+(\([^)]*\))?!:/ { printf "- %s\n", $0 }'
+              printf '\n'
+            fi
+            feature_lines=$(printf '%s\n' "$subjects" | awk '/^feat(\([^)]*\))?:/ { printf "- %s\n", $0 }')
+            fix_lines=$(printf '%s\n' "$subjects" | awk '/^(fix|perf)(\([^)]*\))?:/ { printf "- %s\n", $0 }')
+            other_lines=$(printf '%s\n' "$subjects" | awk '$0 !~ /^(feat|fix|perf)(\([^)]*\))?:/ { printf "- %s\n", $0 }')
+            for group in "Features:$feature_lines" "Fixes and performance:$fix_lines" "Other:$other_lines"; do
+              label=${group%%:*}
+              lines=${group#*:}
+              if [ -n "$lines" ]; then printf '### %s\n\n%s\n\n' "$label" "$lines"; fi
+            done
+          } > "$entry"
+          cat "$entry"
+          printf 'tag=%s\nversion=%s\n' "$tag" "$next_version" >> "$GITHUB_OUTPUT"
+
+      - name: Commit changelog, versions, and release tag
+        if: steps.release.outputs.skip != 'true'
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          node scripts/set-release-version.mjs "$RELEASE_VERSION"
+          cat "$RUNNER_TEMP/changelog-entry.md" CHANGELOG.md > "$RUNNER_TEMP/CHANGELOG.md.new"
+          mv "$RUNNER_TEMP/CHANGELOG.md.new" CHANGELOG.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md package.json package-lock.json tizen/config.xml frontend/build-version.js frontend/app.js
+          git commit -m "chore(release): $RELEASE_TAG [skip ci]"
+          git tag "$RELEASE_TAG"
+          git push origin HEAD:refs/heads/main
+          git push origin "$RELEASE_TAG"
+
+      - name: Create GitHub Release
+        if: steps.release.outputs.skip != 'true'
+        uses: actions/github-script@v7
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_NOTES_FILE: ${{ runner.temp }}/changelog-entry.md
+        with:
+          script: |
+            const fs = require('node:fs');
+            const tag = process.env.RELEASE_TAG;
+            const { owner, repo } = context.repo;
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+              core.info(`Release ${tag} already exists: ${existing.data.html_url}`);
+              return;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            const body = fs.readFileSync(process.env.RELEASE_NOTES_FILE, 'utf8');
+            const release = await github.rest.repos.createRelease({
+              owner,
+              repo,
+              tag_name: tag,
+              name: `ImmichWall ${tag}`,
+              body,
+              draft: false,
+              prerelease: false,
+            });
+            core.info(`Created ${release.data.html_url}`);
+
+  release-tag:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -45,108 +180,36 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine next version and changelog entry
-        id: release
-        run: |
-          latest=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
-          echo "latest tag: ${latest:-none}"
-          if [ -n "$latest" ]; then
-            range="$latest..HEAD"
-          else
-            range="HEAD"
-          fi
-
-          commits=$(git log --no-merges --format='%h%x09%s' "$range")
-          if [ -z "$commits" ]; then
-            echo "No conventional commits since last tag — skipping release."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          subjects=$(printf '%s\n' "$commits" | awk -F'\t' '{ print $2 }')
-
-          bump=patch
-          if git log --no-merges --format='%B' "$range" | grep -qi 'BREAKING CHANGE'; then
-            bump=major
-          fi
-          if printf '%s\n' "$subjects" | grep -qE '^[A-Za-z]+(\([^\)]*\))?!:'; then
-            bump=major
-          fi
-          if [ "$bump" != major ] && printf '%s\n' "$subjects" | grep -qE '^feat(\([^\)]*\))?:'; then
-            bump=minor
-          fi
-          echo "bump: $bump"
-
-          if [ -n "$latest" ]; then
-            next=$(node -e "
-              const [tag, mode] = process.argv.slice(1);
-              const v = tag.slice(1).split('.').map(Number);
-              if (mode === 'major') console.log('v' + (v[0] + 1) + '.0.0');
-              else if (mode === 'minor') console.log('v' + v[0] + '.' + (v[1] + 1) + '.0');
-              else console.log('v' + v[0] + '.' + v[1] + '.' + (v[2] + 1));
-            " "$latest" "$bump")
-          else
-            count=$(git rev-list --count "$range")
-            if [ "$bump" = patch ]; then
-              next=$(node -e "console.log('v0.1.' + process.argv[1])" "$count")
-            else
-              next=v1.0.0
-            fi
-          fi
-          echo "next tag: $next"
-
-          entry="$RUNNER_TEMP/changelog-entry.md"
-          {
-            echo "## [$next] - $(date '+%Y-%m-%d')"
-            echo
-          } > "$entry"
-
-          feature_lines=$(printf '%s\n' "$commits" | awk -F'\t' '$2 ~ /^feat(\([^\)]*\))?!?:/ { printf "- %s (%s)\n", $2, $1 }')
-          fix_lines=$(printf '%s\n' "$commits" | awk -F'\t' '$2 ~ /^fix(\([^\)]*\))?!?:/ { printf "- %s (%s)\n", $2, $1 }')
-          other_lines=$(printf '%s\n' "$commits" | awk -F'\t' '$2 !~ /^feat(\([^\)]*\))?!?:/ && $2 !~ /^fix(\([^\)]*\))?!?:/ { printf "- %s (%s)\n", $2, $1 }')
-
-          for group in "Features:$feature_lines" "Fixes:$fix_lines" "Other:$other_lines"; do
-            label="${group%%:*}"
-            lines="${group#*:}"
-            if [ -n "$lines" ]; then
-              {
-                echo "### $label"
-                echo
-                printf '%s\n' "$lines"
-                echo
-              } >> "$entry"
-            fi
-          done
-
-          cat "$entry"
-          echo "tag=$next" >> "$GITHUB_OUTPUT"
-
-      - name: Save changelog.md, tag, and create release
-        if: steps.release.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="${{ steps.release.outputs.tag }}"
-          entry="$RUNNER_TEMP/changelog-entry.md"
-
-          # changelog.md holds only version sections (newest first); the new
-          # entry is prepended above the last one.
-          if [ -f changelog.md ]; then
-            cat "$entry" changelog.md > "$RUNNER_TEMP/changelog.md.new"
-          else
-            cat "$entry" > "$RUNNER_TEMP/changelog.md.new"
-          fi
-          mv "$RUNNER_TEMP/changelog.md.new" changelog.md
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add changelog.md
-          git commit -m "chore(release): $tag"
-          git tag "$tag"
-          git push origin HEAD:refs/heads/main
-          git push origin "$tag"
-
-          gh release create "$tag" \
-            --title "bp.app $tag" \
-            --notes-file "$entry" \
-            --target HEAD
+      - name: Create GitHub Release for a manually pushed version tag
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const tag = context.ref.replace('refs/tags/', '');
+            const { owner, repo } = context.repo;
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+              core.info(`Release ${tag} already exists: ${existing.data.html_url}`);
+              return;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            let body = `ImmichWall ${tag}`;
+            if (fs.existsSync('CHANGELOG.md')) {
+              const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+              const sectionStart = changelog.indexOf(`## [${tag}]`);
+              if (sectionStart >= 0) {
+                const nextSection = changelog.indexOf('\n## [', sectionStart + 1);
+                body = changelog.slice(sectionStart, nextSection < 0 ? undefined : nextSection).trim();
+              }
+            }
+            const release = await github.rest.repos.createRelease({
+              owner,
+              repo,
+              tag_name: tag,
+              name: `ImmichWall ${tag}`,
+              body,
+              draft: false,
+              prerelease: false,
+            });
+            core.info(`Created ${release.data.html_url}`);
