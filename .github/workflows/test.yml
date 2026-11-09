@@ -26,3 +26,127 @@ jobs:
 
       - name: Run static, backend, integration, and browser tests
         run: npm run test:all
+
+  release:
+    # Every push to main ships a release. The version bump follows
+    # conventional commits:
+    #   breaking changes (BREAKING CHANGE footer or `!:` subject) -> M+1.0.0
+    #   feat subjects -> M.+1.0
+    #   everything else -> patch
+    # The grouped changelog is saved to changelog.md (newest first) and used
+    # as the release notes.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version and changelog entry
+        id: release
+        run: |
+          latest=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          echo "latest tag: ${latest:-none}"
+          if [ -n "$latest" ]; then
+            range="$latest..HEAD"
+          else
+            range="HEAD"
+          fi
+
+          commits=$(git log --no-merges --format='%h%x09%s' "$range")
+          if [ -z "$commits" ]; then
+            echo "No conventional commits since last tag — skipping release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          subjects=$(printf '%s\n' "$commits" | awk -F'\t' '{ print $2 }')
+
+          bump=patch
+          if git log --no-merges --format='%B' "$range" | grep -qi 'BREAKING CHANGE'; then
+            bump=major
+          fi
+          if printf '%s\n' "$subjects" | grep -qE '^[A-Za-z]+(\([^\)]*\))?!:'; then
+            bump=major
+          fi
+          if [ "$bump" != major ] && printf '%s\n' "$subjects" | grep -qE '^feat(\([^\)]*\))?:'; then
+            bump=minor
+          fi
+          echo "bump: $bump"
+
+          if [ -n "$latest" ]; then
+            next=$(node -e "
+              const [tag, mode] = process.argv.slice(1);
+              const v = tag.slice(1).split('.').map(Number);
+              if (mode === 'major') console.log('v' + (v[0] + 1) + '.0.0');
+              else if (mode === 'minor') console.log('v' + v[0] + '.' + (v[1] + 1) + '.0');
+              else console.log('v' + v[0] + '.' + v[1] + '.' + (v[2] + 1));
+            " "$latest" "$bump")
+          else
+            count=$(git rev-list --count "$range")
+            if [ "$bump" = patch ]; then
+              next=$(node -e "console.log('v0.1.' + process.argv[1])" "$count")
+            else
+              next=v1.0.0
+            fi
+          fi
+          echo "next tag: $next"
+
+          entry="$RUNNER_TEMP/changelog-entry.md"
+          {
+            echo "## [$next] - $(date '+%Y-%m-%d')"
+            echo
+          } > "$entry"
+
+          feature_lines=$(printf '%s\n' "$commits" | awk -F'\t' '$2 ~ /^feat(\([^\)]*\))?!?:/ { printf "- %s (%s)\n", $2, $1 }')
+          fix_lines=$(printf '%s\n' "$commits" | awk -F'\t' '$2 ~ /^fix(\([^\)]*\))?!?:/ { printf "- %s (%s)\n", $2, $1 }')
+          other_lines=$(printf '%s\n' "$commits" | awk -F'\t' '$2 !~ /^feat(\([^\)]*\))?!?:/ && $2 !~ /^fix(\([^\)]*\))?!?:/ { printf "- %s (%s)\n", $2, $1 }')
+
+          for group in "Features:$feature_lines" "Fixes:$fix_lines" "Other:$other_lines"; do
+            label="${group%%:*}"
+            lines="${group#*:}"
+            if [ -n "$lines" ]; then
+              {
+                echo "### $label"
+                echo
+                printf '%s\n' "$lines"
+                echo
+              } >> "$entry"
+            fi
+          done
+
+          cat "$entry"
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Save changelog.md, tag, and create release
+        if: steps.release.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.release.outputs.tag }}"
+          entry="$RUNNER_TEMP/changelog-entry.md"
+
+          # changelog.md holds only version sections (newest first); the new
+          # entry is prepended above the last one.
+          if [ -f changelog.md ]; then
+            cat "$entry" changelog.md > "$RUNNER_TEMP/changelog.md.new"
+          else
+            cat "$entry" > "$RUNNER_TEMP/changelog.md.new"
+          fi
+          mv "$RUNNER_TEMP/changelog.md.new" changelog.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add changelog.md
+          git commit -m "chore(release): $tag"
+          git tag "$tag"
+          git push origin HEAD:refs/heads/main
+          git push origin "$tag"
+
+          gh release create "$tag" \
+            --title "bp.app $tag" \
+            --notes-file "$entry" \
+            --target HEAD
