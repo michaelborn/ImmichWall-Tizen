@@ -22,7 +22,7 @@ test('first launch shows a blank API-key screen and connects without saving the 
 
     await page.goto('/');
     await expect(page.locator('#connect-form')).toBeVisible();
-    await expect(page.locator('#connect-server')).toHaveValue('https://immich.theborns.xyz');
+    await expect(page.locator('#connect-server')).toHaveValue('');
     await expect(page.locator('#connect-api-key')).toHaveValue('');
     await expect(page.locator('#empty-message')).toContainText('Connect to your Immich server');
 

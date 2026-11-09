@@ -35,6 +35,7 @@ files:
   - index.html
   - input.js
   - pairing.js
+  - runtime-config.js
   - secure-store.js
   - state.js
   - styles.css

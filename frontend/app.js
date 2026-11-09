@@ -7,6 +7,7 @@
     var driver = window.ImmichWallConnection.create();
     var isTv = driver.kind === 'tv';
     var APP_VERSION = 'v0.2.0';
+    var runtimeConfig = window.ImmichWallRuntimeConfig || {};
 
     var layers = [
         { wrapper: document.querySelectorAll('.photo-layer')[0], image: document.getElementById('photo-a') },
@@ -76,6 +77,9 @@
     document.body.classList.toggle('tv', isTv);
     document.getElementById('app-version').textContent = window.ImmichWallBuildVersion || APP_VERSION;
     document.getElementById('build-version').textContent = 'Build ' + (window.ImmichWallBuildVersion || APP_VERSION);
+    var pairingBaseUrl = String(runtimeConfig.pairingBaseUrl ||
+        (window.location && /^https?:$/.test(window.location.protocol) ? window.location.origin : '')).replace(/\/+$/, '');
+    document.getElementById('pair-url').textContent = pairingBaseUrl ? pairingBaseUrl + '/pair' : 'Pairing URL is configured by this deployment.';
     Input.registerMediaKeys();
 
     function saveSettings() {
@@ -511,6 +515,7 @@
             } else {
                 elements.empty.classList.remove('connected', 'hidden');
                 elements.emptyMessage.textContent = 'Connect to your Immich server to begin.';
+                elements.connectServer.value = initial.serverUrl || runtimeConfig.defaultImmichServerUrl || '';
                 elements.emptyRetry.hidden = true;
                 setConnection('offline', 'Not connected');
                 elements.connectApiKey.focus();
@@ -522,6 +527,7 @@
             } else {
                 elements.empty.classList.remove('connected', 'hidden');
                 elements.emptyMessage.textContent = error.message || 'Unable to start Immich Wall.';
+                elements.connectServer.value = runtimeConfig.defaultImmichServerUrl || '';
                 elements.emptyRetry.hidden = true;
                 setErrorState(true);
                 setConnection('offline', 'Not connected');
@@ -574,7 +580,7 @@
         elements.empty.classList.remove('connected', 'hidden');
         elements.emptyMessage.textContent = 'Enter your Immich connection details.';
         var previousUrl = elements.settingsServer.textContent;
-        elements.connectServer.value = /^https?:\/\//i.test(previousUrl) ? previousUrl : 'https://immich.theborns.xyz';
+        elements.connectServer.value = /^https?:\/\//i.test(previousUrl) ? previousUrl : (runtimeConfig.defaultImmichServerUrl || '');
         elements.connectApiKey.value = '';
         elements.emptyRetry.hidden = true;
         setConnection('offline', 'Not connected');

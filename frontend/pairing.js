@@ -1,9 +1,15 @@
 (function (root) {
     'use strict';
 
-    var PAIRING_SERVER = 'https://immichwall.theborns.xyz';
+    var runtimeConfig = root.ImmichWallRuntimeConfig || {};
+    var configuredPairingBase = String(runtimeConfig.pairingBaseUrl || '').replace(/\/+$/, '');
+    var PAIRING_SERVER = configuredPairingBase ||
+        (root.location && /^https?:$/.test(root.location.protocol) ? root.location.origin : '');
 
     function request(path, method, body) {
+        if (!PAIRING_SERVER) {
+            return Promise.reject(new Error('Pairing URL is not configured. Set PAIRING_BASE_URL in .env and rebuild the TV package.'));
+        }
         return new Promise(function (resolve, reject) {
             var xhr = new XMLHttpRequest();
             xhr.open(method, PAIRING_SERVER + '/api/pairing/' + path, true);

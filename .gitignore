@@ -16,6 +16,8 @@ tizen/.vscode/
 *.jpeg
 *.png
 !tizen/icon.png
+!docs/screenshots/
+!docs/screenshots/*.png
 *.webp
 node_modules/
 

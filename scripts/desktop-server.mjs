@@ -2,7 +2,7 @@
 
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createApp, loadConfig } from './server.mjs';
+import { createApp, loadConfig, loadPublicImmichConfig } from './server.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -11,10 +11,13 @@ export async function startServer({
     port = Number(process.env.PORT ?? 4173),
     environment = process.env,
     envFilePath = process.env.IMMICH_ENV_FILE,
+    publicEnvFilePath = process.env.IMMICH_PUBLIC_ENV_FILE ?? resolve(root, '.env'),
 } = {}) {
     const config = await loadConfig({ envFilePath, environment });
+    const publicConfig = await loadPublicImmichConfig({ envFilePath: publicEnvFilePath, environment });
     const server = createApp({
         ...config,
+        ...publicConfig,
         webRoot: resolve(root, 'frontend'),
     });
 

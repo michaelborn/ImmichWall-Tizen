@@ -31,6 +31,26 @@ export async function loadImmichConfig({ envFilePath, environment = process.env 
     };
 }
 
+export async function loadPublicImmichConfig({ envFilePath, environment = process.env } = {}) {
+    let fileValues = {};
+    if (envFilePath) {
+        const fileEnvironment = {};
+        const result = dotenv.config({
+            path: envFilePath,
+            processEnv: fileEnvironment,
+            override: true,
+            quiet: true,
+        });
+        if (result.error && result.error.code !== 'ENOENT') throw result.error;
+        fileValues = result.parsed ?? fileEnvironment;
+    }
+
+    return {
+        defaultImmichServerUrl: normalizeImmichBaseUrl(environment.IMMICH_SERVER_URL ?? fileValues.IMMICH_SERVER_URL ?? ''),
+        pairingBaseUrl: normalizeImmichBaseUrl(environment.PAIRING_BASE_URL ?? fileValues.PAIRING_BASE_URL ?? ''),
+    };
+}
+
 export function normalizeImmichBaseUrl(value) {
     return String(value ?? '').replace(/\/+$/, '');
 }

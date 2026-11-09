@@ -28,6 +28,8 @@ function errorMessage(error) {
 export function createExpressApp({
     immichBaseUrl = '',
     immichApiKey = '',
+    pairingBaseUrl = process.env.PAIRING_BASE_URL ?? '',
+    defaultImmichServerUrl = '',
     webRoot = resolve(PROJECT_ROOT, 'frontend'),
     pairRoot = resolve(PROJECT_ROOT, 'pair'),
     fetchImpl = fetch,
@@ -38,7 +40,7 @@ export function createExpressApp({
     const resolvedWebRoot = resolve(webRoot);
     const resolvedPairRoot = resolve(pairRoot);
     const service = new ImmichService({ immichBaseUrl, immichApiKey, fetchImpl, random, timeoutMs: immichTimeoutMs });
-    const controller = createImmichController(service);
+    const controller = createImmichController(service, { pairingBaseUrl, defaultImmichServerUrl });
     const pairingController = createPairingController(pairingService);
     const app = express();
 

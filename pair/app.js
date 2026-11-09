@@ -19,6 +19,13 @@
     var step = 'pin';
     var verifiedPin = '';
 
+    fetch('/api/config', { cache: 'no-store' }).then(function (response) {
+        if (!response.ok) return null;
+        return response.json();
+    }).then(function (config) {
+        if (config && config.serverUrl && !urlField.value) urlField.value = config.serverUrl;
+    }).catch(function () { });
+
     function show(message, isError) {
         status.textContent = message;
         status.className = isError ? 'error' : '';

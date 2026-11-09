@@ -15,7 +15,8 @@
     "test:e2e": "playwright test --config=test/playwright.config.mjs",
     "test:live": "node --test test/live/*.test.mjs",
     "test:all": "npm run check && npm run test:unit && npm run test:integration && npm run test:e2e",
-    "deploy": "bash scripts/deploy-tizen.sh"
+    "deploy": "bash scripts/deploy-tizen.sh",
+    "screenshots": "node scripts/capture-readme-screenshots.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

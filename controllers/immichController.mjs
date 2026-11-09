@@ -1,13 +1,14 @@
 import { parseConnectionInput } from '../config/immich.js';
 import { ImmichHttpError } from '../services/immichService.mjs';
 
-export function createImmichController(service) {
+export function createImmichController(service, { pairingBaseUrl = '', defaultImmichServerUrl = '' } = {}) {
     return {
         getConfig(request, response) {
             const connection = service.getConnection();
             response.json({
                 configured: service.isConfigured(),
-                serverUrl: connection.immichBaseUrl,
+                serverUrl: connection.immichBaseUrl || defaultImmichServerUrl,
+                pairingBaseUrl,
             });
         },
 

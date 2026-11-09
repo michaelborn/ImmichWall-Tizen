@@ -72,7 +72,8 @@
     }
 
     function createTvConnection(secureStore) {
-        var LEGACY_SERVER = 'https://immich.theborns.xyz';
+        var runtimeConfig = root.ImmichWallRuntimeConfig || {};
+        var DEFAULT_SERVER = runtimeConfig.defaultImmichServerUrl || '';
 
         function request(url, method, apiKey, body, responseType) {
             return new Promise(function (resolve, reject) {
@@ -152,7 +153,7 @@
                 return secureStore.load().then(function (saved) {
                     if (saved) {
                         connection = {
-                            serverUrl: saved.serverUrl || LEGACY_SERVER,
+                            serverUrl: saved.serverUrl || DEFAULT_SERVER,
                             apiKey: saved.apiKey,
                         };
                         return { configured: true, serverUrl: connection.serverUrl };

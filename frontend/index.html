@@ -17,7 +17,8 @@
             <div class="brand-mark" aria-hidden="true">i</div>
             <p class="eyebrow">CONNECT THIS TV</p>
             <h1>Immich Wall</h1>
-            <p>On your phone or computer, open<br><strong>https://immichwall.theborns.xyz/pair</strong></p>
+            <p>On your phone or computer, open the pairing page:</p>
+            <p id="pair-url" class="pair-url">Pairing URL is configured by this deployment.</p>
             <p>Step 1: verify the PIN below. Step 2: add your Immich server URL and API key on the phone.</p>
             <p id="pair-pin" class="pair-pin" aria-live="polite">Starting…</p>
             <p id="pair-expiry" class="pair-expiry">The PIN refreshes automatically when it expires.</p>
@@ -31,7 +32,7 @@
             <p id="empty-message">Connect to your Immich server to begin.</p>
             <form id="connect-form" class="connect-form desktop-only">
                 <label for="connect-server">Immich server URL</label>
-                <input id="connect-server" name="server" type="url" value="https://immich.theborns.xyz" required autocomplete="url" spellcheck="false">
+                <input id="connect-server" name="server" type="url" value="" required autocomplete="url" spellcheck="false">
                 <label for="connect-api-key">Immich API key</label>
                 <input id="connect-api-key" name="api-key" type="password" required autocomplete="new-password">
                 <button id="connect-submit" class="button button-primary" type="submit">Connect &amp; start</button>
@@ -172,6 +173,7 @@
 
     <script src="state.js"></script>
     <script src="input.js"></script>
+    <script src="runtime-config.js"></script>
     <script src="secure-store.js"></script>
     <script src="pairing.js"></script>
     <script src="build-version.js"></script>

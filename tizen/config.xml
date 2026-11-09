@@ -5,7 +5,6 @@
         version="0.2.0"
         viewmodes="fullscreen">
     <access origin="*" />
-    <access origin="https://immichwall.theborns.xyz" />
     <tizen:application id="ImTvWall01.ImmichWall" package="ImTvWall01" required_version="2.4" />
     <content src="index.html" />
     <icon src="icon.png" />
