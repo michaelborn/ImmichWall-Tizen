@@ -6,7 +6,7 @@
     var Pair = window.ImmichTvPairing;
     var driver = window.ImmichWallConnection.create();
     var isTv = driver.kind === 'tv';
-    var APP_VERSION = 'v0.2.0';
+    var APP_VERSION = 'v0.2.1';
     var runtimeConfig = window.ImmichWallRuntimeConfig || {};
 
     var layers = [

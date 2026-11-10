@@ -1,7 +1,7 @@
 {
   "name": "immich-wall-poc",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Local desktop proof of concept for an Immich photo frame",
   "engines": {
     "node": ">=20"

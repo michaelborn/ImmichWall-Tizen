@@ -1,3 +1,9 @@
+## [v0.2.1] - 2026-11-10
+
+### Other
+
+- Update readme
+
 # Changelog
 
 ## [v0.2.0] - 2026-11-09
