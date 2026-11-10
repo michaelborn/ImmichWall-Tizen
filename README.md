@@ -9,18 +9,16 @@ ImmichWall is a full-screen photo frame for Samsung Tizen TVs, backed by a self-
 # Features
 
 - PIN-based phone setup: verify the TV PIN, then enter the Immich URL and read-only API key on the phone/computer.
-- All photos, Favorites, or a chosen album as the slideshow source.
-- Rotation intervals from 10 seconds to 60 minutes, with Cover/Contain framing.
-- Server-side random image selection with album and Favorites filters; the desktop and TV use the same slideshow/settings frontend.
-- TV remote controls for previous/next, settings, Play/Pause, and Unpair.
+- Rotate through Favorites, a selected album, or All Photos
+- Rotate every 10 seconds to 60 minutes, with Cover/Contain framing.
+- Navigate slideshow with your tv remote - back/next/play/pause
 - Samsung KeyManager credential storage, with local app storage as a compatibility fallback when KeyManager is unavailable.
-- The current image stays visible when Immich is unavailable; the app shows an error and retries.
 
 # Supported Versions
 
 - **Immich Server:** v3.1.x is the verified range. Older versions may work via the metadata-search fallback when `/api/search/random` is unavailable, but are not certified.
-- **Samsung Tizen:** Tizen Web API 2.4 or later is declared; physical verification has been done on Tizen 5.5.
-- **Node.js:** 20 or later for development, tests, and the server.
+- **Samsung Tizen:** Tizen Web API 2.4.x+ (tested on Tizen 5.5)
+- **Node.js:** v20.x+ for development, tests, and the server.
 
 # Getting Started
 
